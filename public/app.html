@@ -13,7 +13,7 @@
 <meta property="og:description" content="Hệ thống quản lý in ấn, báo giá tự động, đơn hàng, khách hàng, kho và doanh thu Hành Tinh Xanh">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<title>Hành Tinh Xanh V27.1 - Online Firestore</title>
+<title>Hành Tinh Xanh V27.3 - Tạm tắt đăng nhập</title>
 <style>
 :root{
   --green:#07562f;
@@ -3183,7 +3183,7 @@ body.sidebar-open{
 </head>
 <body>
 
-<div class="auth-gate" id="authGate">
+<div class="auth-gate hidden" id="authGate" style="display:none!important">
   <div class="auth-box">
     <div class="auth-brand">
       <div class="auth-brand-mark">HTX</div>
@@ -3246,7 +3246,7 @@ body.sidebar-open{
   </div>
 </div>
 
-<div class="erp-shell auth-locked" id="erpShell">
+<div class="erp-shell" id="erpShell">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="brand-mark">HTX</div>
@@ -5460,7 +5460,10 @@ function showAuthMessage(msg,type="error"){
 }
 
 function showLogin(){
-  $("authGate").classList.remove("hidden");
+  // Đăng nhập đang được tạm tắt.
+  if($("authGate"))$("authGate").style.display="none";
+  if($("erpShell"))$("erpShell").classList.remove("auth-locked");
+  return;
   $("erpShell").classList.add("auth-locked");
   $("loginForm").style.display="block";
   $("firstAccountForm").style.display="none";
@@ -5619,36 +5622,33 @@ async function login(){
 }
 
 async function restoreSession(){
-  let data=null;
-  try{data=await backendMe()}catch(err){console.warn("Cookie session restore failed:",err)}
-  if(!data?.user && isHostedOnline())data=await restoreBackendSessionFromFirebase();
+  // TẠM THỜI: bỏ màn hình đăng nhập, tự vào bằng quyền Giám đốc.
+  if($("authGate"))$("authGate").style.display="none";
+  if($("erpShell"))$("erpShell").classList.remove("auth-locked");
 
-  if(data?.user){
-    try{
-      currentUser={...data.user};
-      __nativeSetItem.call(localStorage,SESSION_KEY,String(data.user.id));
-      await retryPendingRealtimeWrites();
-      await hydrateFromBackend();
-      await startRealtime(data.firebaseToken,data.user);
-      enterApp();
-      return;
-    }catch(err){
-      console.error("Restore/database error:",err);
-      setCloudStatus("Database: chưa kết nối","offline");
-      showLogin();
-      const health=await getDatabaseHealth();
-      showAuthMessage("Website chưa kết nối được cơ sở dữ liệu. "+(health?.database?.error||"Kiểm tra Firebase Admin trên Vercel."));
-      return;
-    }
-  }
+  const fallbackUser={
+    id:202609190001,
+    name:"Giám đốc",
+    username:"giamdoc",
+    role:"director",
+    active:true
+  };
 
-  if(isHostedOnline()){showLogin();return}
-  const users=getUsers();
-  const id=Number(localStorage.getItem(SESSION_KEY)||0);
-  const user=users.find(u=>Number(u.id)===id && u.active!==false);
-  if(!user){showLogin();return}
-  currentUser={...user};
+  currentUser={...fallbackUser};
+  __nativeSetItem.call(localStorage,SESSION_KEY,String(fallbackUser.id));
   enterApp();
+
+  try{
+    const data=await backendTemporarySession();
+    if(data?.user)currentUser={...data.user};
+    await retryPendingRealtimeWrites();
+    await hydrateFromBackend();
+    if(data?.firebaseToken)await startRealtime(data.firebaseToken,currentUser);
+    enterApp();
+  }catch(err){
+    console.warn("Phiên tạm / database chưa sẵn sàng:",err);
+    setCloudStatus("Database: chưa kết nối","offline");
+  }
 }
 
 async function logout(){
@@ -6005,7 +6005,7 @@ function setupPwa(){
   });
 
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
-    navigator.serviceWorker.register("/service-worker.js?v=27.1",{updateViaCache:"none"})
+    navigator.serviceWorker.register("/service-worker.js?v=27.3",{updateViaCache:"none"})
       .then(reg=>reg.update().catch(()=>{}))
       .catch(err=>console.warn("SW:",err));
   }
@@ -6279,6 +6279,17 @@ async function hydrateFromBackend(){
   $("cloudSyncStatus")?.classList.add("realtime");
 }
 
+async function backendTemporarySession(){
+  const res=await fetch("/api/auth/temporary",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    credentials:"same-origin"
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(data.error||"Không tạo được phiên tạm.");
+  return data;
+}
+
 async function backendLogin(username,password){
   const res=await fetch("/api/auth/login",{
     method:"POST",
@@ -6403,7 +6414,10 @@ function init(){
   });
   window.addEventListener("resize",()=>{if(window.innerWidth>840)closeMobileSidebar()});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMobileSidebar()});
-  $("logoutBtn").addEventListener("click",logout);
+  if($("logoutBtn")){
+    $("logoutBtn").style.display="none";
+    $("logoutBtn").addEventListener("click",logout);
+  }
 
   $("orderSearch").addEventListener("input",renderHistory);
   $("orderStatusFilter").addEventListener("change",renderHistory);
@@ -9634,6 +9648,6 @@ async function saveAndExport(){
 }
 init();
 </script>
-<script type="module" src="/realtime.js?v=27.1"></script>
+<script type="module" src="/realtime.js?v=27.3"></script>
 </body>
 </html>

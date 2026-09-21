@@ -68,7 +68,7 @@ app.get("/api/health",async(req,res)=>{
   res.status(database.connected?200:503).json({
     ok:database.connected,
     app:"Hành Tinh Xanh Full-stack",
-    version:"27.1",
+    version:"27.3",
     commit:process.env.VERCEL_GIT_COMMIT_SHA||null,
     deployment:process.env.VERCEL_URL||null,
     database,
@@ -110,6 +110,28 @@ app.get("/api/firebase-config",(req,res)=>{
     });
   }
   res.json({configured: true, config});
+});
+
+app.post("/api/auth/temporary",async(req,res,next)=>{
+  try{
+    const user={
+      id:202609190001,
+      name:"Giám đốc",
+      username:"giamdoc",
+      role:"director",
+      active:true
+    };
+    const sessionToken=await setSessionCookie(res,user,req);
+    let firebaseToken=null;
+    try{firebaseToken=await createRealtimeToken(user)}catch(err){console.warn("Temporary realtime token unavailable:",err.message)}
+    res.json({
+      ok:true,
+      temporaryNoLogin:true,
+      user:sanitizeUser(user),
+      token:sessionToken,
+      firebaseToken
+    });
+  }catch(err){next(err)}
 });
 
 app.post("/api/auth/login",async(req,res,next)=>{

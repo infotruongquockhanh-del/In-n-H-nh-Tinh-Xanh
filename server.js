@@ -11,8 +11,10 @@ import {
   requireSession,
   requireDirector,
   sanitizeUser,
-  createRealtimeToken
+  createRealtimeToken,
+  restoreUserFromFirebaseIdToken
 } from "./src/auth.js";
+import { getFirebaseDiagnostics, verifyFirebaseConnection } from "./src/firebase-admin.js";
 import {
   ensureBootstrap,
   readAllState,
@@ -37,7 +39,7 @@ import {
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express();
-const port=3000;
+const port=Number(process.env.PORT||3000);
 
 app.disable("x-powered-by");
 app.use((req,res,next)=>{
@@ -49,15 +51,16 @@ app.use((req,res,next)=>{
 app.use(express.json({limit:"8mb"}));
 app.use(cookieParser());
 
-app.get("/api/health",(req,res)=>{
-  res.json({
-    ok:true,
+app.get("/api/health",async(req,res)=>{
+  const database=await verifyFirebaseConnection();
+  res.status(database.connected?200:503).json({
+    ok:database.connected,
     app:"Hành Tinh Xanh Full-stack",
-    version:25,
+    version:27,
+    database,
     time:new Date().toISOString()
   });
 });
-
 
 app.get("/api/firebase-config",(req,res)=>{
   let fileConfig={};
@@ -116,9 +119,32 @@ app.post("/api/auth/login",async(req,res,next)=>{
 
 app.get("/api/auth/me",requireSession,async(req,res,next)=>{
   try{
+    await setSessionCookie(res,req.user,req);
     const firebaseToken=await createRealtimeToken(req.user);
     res.json({ok:true,user:sanitizeUser(req.user),firebaseToken});
   }catch(err){next(err)}
+});
+
+app.post("/api/auth/restore",async(req,res,next)=>{
+  try{
+    const header=String(req.headers.authorization||"");
+    const match=header.match(/^Bearer\s+(.+)$/i);
+    if(!match)return res.status(401).json({error:"Thiếu Firebase ID token."});
+    const user=await restoreUserFromFirebaseIdToken(match[1]);
+    if(user?.disabled)return res.status(403).json({error:"Tài khoản này đang bị khóa."});
+    if(!user)return res.status(401).json({error:"Không thể khôi phục phiên đăng nhập."});
+    const sessionToken=await setSessionCookie(res,user,req);
+    const firebaseToken=await createRealtimeToken(user);
+    res.json({ok:true,user:sanitizeUser(user),token:sessionToken,firebaseToken});
+  }catch(err){
+    if(String(err?.code||"").startsWith("auth/"))return res.status(401).json({error:"Phiên Firebase không còn hợp lệ."});
+    next(err);
+  }
+});
+
+app.get("/api/database-status",async(req,res)=>{
+  const database=await verifyFirebaseConnection();
+  res.status(database.connected?200:503).json({database});
 });
 
 app.post("/api/auth/logout",(req,res)=>{
@@ -316,8 +342,10 @@ async function bootstrap(){
 
 await bootstrap();
 
-app.listen(port,"0.0.0.0",()=>{
-  console.log(`Hành Tinh Xanh V25 Online: http://0.0.0.0:${port}`);
-});
+if(!process.env.VERCEL){
+  app.listen(port,"0.0.0.0",()=>{
+    console.log(`Hành Tinh Xanh V27 Online: http://0.0.0.0:${port}`);
+  });
+}
 
 export default app;

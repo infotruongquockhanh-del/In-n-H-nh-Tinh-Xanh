@@ -5515,6 +5515,15 @@ function createFirstAccount(){
 }
 
 
+async function getDatabaseHealth(){
+  try{
+    const res=await fetch("/api/health",{cache:"no-store"});
+    return await res.json().catch(()=>({ok:false}));
+  }catch(err){
+    return {ok:false,database:{connected:false,error:err.message}};
+  }
+}
+
 function isHostedOnline(){
   return /^https?:$/.test(location.protocol);
 }
@@ -5585,74 +5594,59 @@ async function login(){
     showAuthMessage("Vui lòng nhập tài khoản và mật khẩu.");
     return;
   }
-
   showAuthMessage("Đang kết nối cơ sở dữ liệu...","ok");
   try{
     const data=await backendLogin(username,password);
-    const user=data.user;
-    await hydrateFromBackend();
-    __nativeSetItem.call(localStorage,SESSION_KEY,String(user.id));
-    currentUser={...user};
+    currentUser={...data.user};
+    __nativeSetItem.call(localStorage,SESSION_KEY,String(data.user.id));
     $("loginPassword").value="";
-    await startRealtime(data.firebaseToken,user);
+    await retryPendingRealtimeWrites();
+    await hydrateFromBackend();
+    await startRealtime(data.firebaseToken,data.user);
     enterApp();
   }catch(err){
-    if(err?.status===401 || err?.status===403){
-      showAuthMessage(err.message||"Tên đăng nhập hoặc mật khẩu không đúng.");
+    console.error("Login/database error:",err);
+    const health=await getDatabaseHealth();
+    const dbError=health?.database?.error;
+    const missing=health?.database?.missing;
+    setCloudStatus("Database: chưa kết nối","offline");
+    if(dbError || (Array.isArray(missing)&&missing.length)){
+      showAuthMessage("Cơ sở dữ liệu chưa kết nối. "+(dbError||"")+(Array.isArray(missing)&&missing.length?(" Thiếu: "+missing.join(", ")):""));
       return;
     }
-
-    console.warn("Backend login unavailable.",err);
-    setCloudStatus("Database: không kết nối","offline");
-
-    // Website online không được âm thầm rơi về localStorage vì sẽ tạo dữ liệu riêng từng máy.
-    if(isHostedOnline()){
-      showAuthMessage("Không kết nối được máy chủ/database. Vui lòng kiểm tra cấu hình Vercel + Firebase rồi đăng nhập lại.");
-      return;
-    }
-
-    // Chỉ giữ fallback cho file HTML/local dev.
-    const user=localLoginFallback(username,password);
-    if(!user)return;
-    __nativeSetItem.call(localStorage,SESSION_KEY,String(user.id));
-    currentUser={...user};
-    $("loginPassword").value="";
-    enterApp();
-    showToast("Đang chạy chế độ local thử nghiệm.");
+    showAuthMessage(err.message||"Không đăng nhập được.");
   }
 }
 
 async function restoreSession(){
-  try{
-    const data=await backendMe();
-    if(data?.user){
-      await hydrateFromBackend();
-      __nativeSetItem.call(localStorage,SESSION_KEY,String(data.user.id));
+  let data=null;
+  try{data=await backendMe()}catch(err){console.warn("Cookie session restore failed:",err)}
+  if(!data?.user && isHostedOnline())data=await restoreBackendSessionFromFirebase();
+
+  if(data?.user){
+    try{
       currentUser={...data.user};
+      __nativeSetItem.call(localStorage,SESSION_KEY,String(data.user.id));
+      await retryPendingRealtimeWrites();
+      await hydrateFromBackend();
       await startRealtime(data.firebaseToken,data.user);
       enterApp();
       return;
-    }
-    setCloudStatus("Cloud: sẵn sàng","ok");
-    showLogin();
-    return;
-  }catch(err){
-    console.warn("Backend session unavailable:",err);
-    setCloudStatus("Database: không kết nối","offline");
-
-    if(isHostedOnline()){
+    }catch(err){
+      console.error("Restore/database error:",err);
+      setCloudStatus("Database: chưa kết nối","offline");
       showLogin();
-      showAuthMessage("Website chưa kết nối được database. Kiểm tra Vercel Environment Variables và Firebase.");
+      const health=await getDatabaseHealth();
+      showAuthMessage("Website chưa kết nối được cơ sở dữ liệu. "+(health?.database?.error||"Kiểm tra Firebase Admin trên Vercel."));
       return;
     }
   }
 
+  if(isHostedOnline()){showLogin();return}
   const users=getUsers();
-  if(!users.length){showLogin();return}
   const id=Number(localStorage.getItem(SESSION_KEY)||0);
   const user=users.find(u=>Number(u.id)===id && u.active!==false);
   if(!user){showLogin();return}
-  cloudSyncReady=false;
   currentUser={...user};
   enterApp();
 }
@@ -5672,22 +5666,13 @@ function enterApp(){
   if(!currentUser)return;
   if($("authGate"))$("authGate").classList.add("hidden");
   if($("erpShell"))$("erpShell").classList.remove("auth-locked");
-
   if($("currentUserName"))$("currentUserName").textContent=currentUser.name||currentUser.username||"Người dùng";
   if($("currentUserRole"))$("currentUserRole").textContent=roleLabel(currentUser.role);
   if($("userAvatar"))$("userAvatar").textContent=(currentUser.name||currentUser.username||"U").charAt(0).toUpperCase();
-
   applyPermissions();
-
-  const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>
-    ["dashboard","workmonth","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x)
-  );
-  const currentHash=(location.hash||"").replace("#","").trim();
-  // Khi F5 hoặc load lại trang, mặc định hiển thị trang Đơn sản xuất
-  const targetPage=(currentHash && currentHash!=="dashboard" && hasPagePermission(currentHash))
-    ? currentHash
-    : (hasPagePermission("orders") ? "orders" : (allowed[0]||"orders"));
-  navigate(targetPage,true);
+  refreshDesignerControls();
+  const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","workmonth","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
+  navigate(hasPagePermission("orders")?"orders":(allowed[0]||"orders"),true);
 }
 
 function applyPermissions(){
@@ -6160,14 +6145,15 @@ async function pushCollectionDelta(key,oldRaw,newRaw){
     }
   }
 
-  if(!ops.length)return;
+  if(!ops.length)return true;
   setCloudStatus("Đang lưu realtime","syncing");
   for(const op of ops){
     const ok=await sendEntityOperation(op);
-    if(!ok)return;
+    if(!ok)return false;
   }
   setCloudStatus("Realtime: đã lưu","ok");
   $("cloudSyncStatus")?.classList.add("realtime");
+  return true;
 }
 
 function scheduleCollectionDelta(key,oldRaw,newRaw){
@@ -6243,11 +6229,10 @@ Storage.prototype.setItem=function(key,value){
   const result=__nativeSetItem.call(this,key,value);
   if(this===localStorage && !window.__HTXRealtimeHydrating){
     const k=String(key);
-    if(CLOUD_SYNC_KEYS.includes(k)){
-      scheduleCloudPush(k);
-    }
     if(REALTIME_COLLECTION_KEYS.has(k)){
       scheduleCollectionDelta(k,oldRaw,String(value));
+    }else if(CLOUD_SYNC_KEYS.includes(k)){
+      scheduleCloudPush(k);
     }
   }
   return result;
@@ -6258,78 +6243,38 @@ Storage.prototype.removeItem=function(key){
   const oldRaw=this===localStorage?localStorage.getItem(k):null;
   const result=__nativeRemoveItem.call(this,key);
   if(this===localStorage && !window.__HTXRealtimeHydrating){
-    if(CLOUD_SYNC_KEYS.includes(k)){
-      scheduleCloudPush(k);
-    }
     if(REALTIME_COLLECTION_KEYS.has(k)){
       scheduleCollectionDelta(k,oldRaw,"[]");
+    }else if(CLOUD_SYNC_KEYS.includes(k)){
+      scheduleCloudPush(k);
     }
   }
   return result;
 };
 
 async function hydrateFromBackend(){
-  setCloudStatus("Cloud: đang tải","syncing");
-  const res=await fetch("/api/state",{credentials:"same-origin"});
+  setCloudStatus("Database: đang tải","syncing");
+  const res=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
+  const payload=await res.json().catch(()=>({}));
   if(!res.ok){
-    const data=await res.json().catch(()=>({}));
-    throw new Error(data.error||`Không tải được dữ liệu (${res.status})`);
+    const detail=payload?.firebase?.error || payload?.error || ("Không tải được dữ liệu ("+res.status+")");
+    throw new Error(detail);
   }
-  const payload=await res.json();
   cloudHydrating=true;
-  const pushBackKeys=[];
   try{
     for(const key of CLOUD_SYNC_KEYS){
       if(!(key in payload.state))continue;
-      const remoteVal=payload.state[key];
-      if(remoteVal===null || remoteVal===undefined)continue;
-
-      if(Array.isArray(remoteVal) || (typeof remoteVal==="string" && remoteVal.startsWith("["))){
-        const remoteArr=Array.isArray(remoteVal)?remoteVal:JSON.parse(remoteVal||"[]");
-        let localArr=[];
-        try{
-          localArr=JSON.parse(localStorage.getItem(key)||"[]");
-          if(!localArr.length && key==="htx_auto_quotes_v5"){
-            localArr=getHistory();
-          }
-        }catch{}
-        if(!Array.isArray(localArr))localArr=[];
-
-        // Không ghi đè nếu database chưa có nhưng local đã có dữ liệu trước đó!
-        if(remoteArr.length===0 && localArr.length>0){
-          pushBackKeys.push(key);
-          continue;
-        }
-
-        // Hợp nhất dữ liệu để không làm mất các đơn hàng tạo trước đó
-        if(remoteArr.length>0 && localArr.length>0){
-          const remoteIds=new Set(remoteArr.map((x,i)=>entityIdFor(key,x,i)));
-          const unposted=localArr.filter((x,i)=>!remoteIds.has(entityIdFor(key,x,i)));
-          if(unposted.length>0){
-            const merged=[...unposted,...remoteArr];
-            if(key==="htx_auto_quotes_v5"){
-              merged.sort((a,b)=>Number(b.id||0)-Number(a.id||0));
-            }
-            __nativeSetItem.call(localStorage,key,JSON.stringify(merged));
-            pushBackKeys.push(key);
-            continue;
-          }
-        }
-
-        __nativeSetItem.call(localStorage,key,JSON.stringify(remoteArr));
-      } else {
-        __nativeSetItem.call(localStorage,key,typeof remoteVal==="string"?remoteVal:JSON.stringify(remoteVal));
-      }
+      const value=payload.state[key];
+      if(value===undefined)continue;
+      if(value===null)__nativeRemoveItem.call(localStorage,key);
+      else __nativeSetItem.call(localStorage,key,typeof value==="string"?value:JSON.stringify(value));
     }
   }finally{
     cloudHydrating=false;
   }
   cloudSyncReady=true;
-  setCloudStatus("Cloud: đã đồng bộ","ok");
-
-  for(const k of pushBackKeys){
-    cloudPushKey(k);
-  }
+  setCloudStatus("Database: đã kết nối","ok");
+  $("cloudSyncStatus")?.classList.add("realtime");
 }
 
 async function backendLogin(username,password){
@@ -6422,13 +6367,16 @@ function init(){
     }
   });
 
-  $("saveOnly").addEventListener("click",()=>{
+  $("saveOnly").addEventListener("click",async()=>{
     if(!hasPermission("quote")){showToast("Bạn không có quyền tạo báo giá.");return}
     const q=saveQuote();
-    if(q){
-      showToast(q._updated?`Đã cập nhật đơn ${q.orderCode}`:`Đã lưu đơn ${q.orderCode}`);
-      navigate("orders");
-    }
+    if(!q)return;
+    showToast("Đang lưu đơn lên Firestore...");
+    const ok=await waitForOrderPersistence();
+    if(!ok){alert("Chưa lưu được đơn lên cơ sở dữ liệu. Vui lòng kiểm tra kết nối Firebase/Vercel rồi thử lại.");return}
+    try{await hydrateFromBackend()}catch{}
+    showToast(q._updated?`Đã cập nhật đơn ${q.orderCode} trên database`:`Đã lưu đơn ${q.orderCode} trên database`);
+    navigate("orders");
   });
 
   $("printQuoteBtn").addEventListener("click",()=>{
@@ -7202,10 +7150,20 @@ function getHistory(){
   }catch{return[]}
 }
 
+let lastOrderPersistPromise=Promise.resolve(true);
 function writeHistory(list){
-  localStorage.setItem("htx_auto_quotes_v5",JSON.stringify(list.slice(0,300)));
-  scheduleCloudPush("htx_auto_quotes_v5");
+  const key="htx_auto_quotes_v5";
+  const oldRaw=localStorage.getItem(key)||"[]";
+  const newRaw=JSON.stringify(list.slice(0,300));
+  __nativeSetItem.call(localStorage,key,newRaw);
+  if(isHostedOnline() && !cloudHydrating && !window.__HTXRealtimeHydrating){
+    lastOrderPersistPromise=pushCollectionDelta(key,oldRaw,newRaw).then(ok=>ok!==false).catch(err=>{console.error("Persist order failed:",err);return false});
+  }else{
+    lastOrderPersistPromise=Promise.resolve(true);
+  }
+  return lastOrderPersistPromise;
 }
+async function waitForOrderPersistence(){try{return await lastOrderPersistPromise}catch{return false}}
 
 function getCustomerInfo(){
   return {
@@ -9661,9 +9619,13 @@ function downloadXlsxObject(q){
   setTimeout(()=>URL.revokeObjectURL(url),1200);
   showToast("Đã tạo file Excel báo giá");
 }
-function saveAndExport(){
+async function saveAndExport(){
   const q=saveQuote();
   if(!q)return;
+  showToast("Đang lưu đơn lên Firestore...");
+  const ok=await waitForOrderPersistence();
+  if(!ok){alert("Chưa lưu được đơn lên cơ sở dữ liệu nên chưa xuất Excel.");return}
+  try{await hydrateFromBackend()}catch{}
   downloadXlsxObject(q);
   showToast(q._updated?`Đã cập nhật & xuất Excel ${q.orderCode}`:`Đã lưu & xuất Excel ${q.orderCode}`);
   navigate("orders");

@@ -40,6 +40,17 @@ export async function createRealtimeToken(user){
   });
 }
 
+export async function restoreUserFromFirebaseIdToken(idToken){
+  const decoded=await adminAuth.verifyIdToken(String(idToken||""),true);
+  const uid=String(decoded.uid||"");
+  if(!uid)return null;
+  const doc=await db.collection("users").doc(uid).get();
+  if(!doc.exists)return null;
+  const user=doc.data();
+  if(user.active===false)return {disabled:true};
+  return user;
+}
+
 async function signSession(user){
   return new SignJWT({
     uid:String(user.id),
@@ -72,7 +83,7 @@ export async function setSessionCookie(res,user,req=null){
   );
   res.cookie(SESSION_COOKIE,token,{
     httpOnly:true,
-    sameSite:isHttps?"none":"lax",
+    sameSite:"lax",
     secure:isHttps,
     maxAge:30*24*60*60*1000,
     path:"/"
@@ -87,7 +98,7 @@ export function clearSessionCookie(res,req=null){
   );
   res.clearCookie(SESSION_COOKIE,{
     httpOnly:true,
-    sameSite:isHttps?"none":"lax",
+    sameSite:"lax",
     secure:isHttps,
     path:"/"
   });

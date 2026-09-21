@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getAuth, signInWithCustomToken, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore,
   collection,
@@ -48,6 +48,7 @@ async function initFirebase(){
   if(!res.ok || !data.config)throw new Error(data?.error||data?.message||"Không tải được Firebase config.");
   firebaseApp=initializeApp(data.config);
   auth=getAuth(firebaseApp);
+  await setPersistence(auth,browserLocalPersistence);
   db=data.config.firestoreDatabaseId ? getFirestore(firebaseApp, data.config.firestoreDatabaseId) : getFirestore(firebaseApp);
 }
 
@@ -65,13 +66,6 @@ function subscribeCollections(){
     const unsub=onSnapshot(collection(db,map.collection),snap=>{
       const rows=snap.docs.map(d=>d.data());
       if(map.sort)rows.sort(map.sort);
-      if(rows.length===0){
-        let localExisting=[];
-        try{localExisting=JSON.parse(localStorage.getItem(map.key)||"[]")}catch{}
-        if(Array.isArray(localExisting) && localExisting.length>0){
-          return;
-        }
-      }
       writeCache(map.key,rows);
     },err=>{
       console.error("Realtime",map.collection,err);
@@ -92,18 +86,48 @@ function subscribeCollections(){
   }
 }
 
+function waitForAuthUser(timeoutMs=5000){
+  return new Promise(resolve=>{
+    if(auth?.currentUser)return resolve(auth.currentUser);
+    let done=false;
+    let unsub=()=>{};
+    let timer=null;
+    const finish=user=>{
+      if(done)return;
+      done=true;
+      if(timer)clearTimeout(timer);
+      try{unsub()}catch{}
+      resolve(user||null);
+    };
+    unsub=onAuthStateChanged(auth,user=>finish(user),()=>finish(null));
+    timer=setTimeout(()=>finish(auth?.currentUser||null),timeoutMs);
+  });
+}
+
 async function start(customToken,user){
   await initFirebase();
   currentRole=String(user?.role||"");
   if(customToken && auth){
-    try{
-      await signInWithCustomToken(auth,customToken);
-    }catch(err){
-      console.warn("Firebase Auth signInWithCustomToken:",err.message);
-    }
+    await setPersistence(auth,browserLocalPersistence);
+    await signInWithCustomToken(auth,customToken);
   }
   subscribeCollections();
   return true;
+}
+
+async function restoreBackendSession(){
+  await initFirebase();
+  const user=await waitForAuthUser();
+  if(!user)return null;
+  const idToken=await user.getIdToken(true);
+  const res=await fetch("/api/auth/restore",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+idToken},
+    credentials:"same-origin"
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(data.error||"Không thể khôi phục phiên.");
+  return data;
 }
 
 async function stop(){
@@ -113,5 +137,5 @@ async function stop(){
   }
 }
 
-window.HTXRealtime={start,stop,stopListeners};
+window.HTXRealtime={start,stop,stopListeners,restoreBackendSession};
 window.HTXRealtimeReady=Promise.resolve(window.HTXRealtime);

@@ -12,25 +12,25 @@ service cloud.firestore {
     }
 
     // Frontend realtime listeners: READ ONLY.
+    // Mutations are handled exclusively via backend /api/entity endpoints.
     match /orders/{id} {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if false;
     }
     match /customers/{id} {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if false;
     }
     match /inventory/{id} {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if false;
     }
     match /customProducts/{id} {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if false;
     }
     match /settings/{id} {
-      allow read: if signedIn()
-        && (id != "htx_payroll_v17" || payrollAllowed());
+      allow read: if id != "htx_payroll_v17" || signedIn();
       allow write: if false;
     }
 

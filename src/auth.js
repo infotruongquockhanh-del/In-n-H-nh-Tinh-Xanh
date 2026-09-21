@@ -40,19 +40,6 @@ export async function createRealtimeToken(user){
   });
 }
 
-export async function restoreUserFromFirebaseIdToken(idToken){
-  const decoded=await adminAuth.verifyIdToken(String(idToken||""),true);
-  const uid=String(decoded.uid||"");
-  if(!uid)return null;
-
-  const doc=await db.collection("users").doc(uid).get();
-  if(!doc.exists)return null;
-
-  const user=doc.data();
-  if(user.active===false)return {disabled:true};
-  return user;
-}
-
 async function signSession(user){
   return new SignJWT({
     uid:String(user.id),
@@ -65,6 +52,8 @@ async function signSession(user){
     .sign(secret);
 }
 
+export { signSession };
+
 export async function loginUser(username,password){
   const uname=String(username||"").trim().toLowerCase();
   const snap=await db.collection("users").where("username","==",uname).limit(1).get();
@@ -75,28 +64,41 @@ export async function loginUser(username,password){
   return user;
 }
 
-export async function setSessionCookie(res,user){
+export async function setSessionCookie(res,user,req=null){
   const token=await signSession(user);
+  const isHttps = Boolean(
+    process.env.NODE_ENV==="production" ||
+    (req && (req.secure || req.headers?.["x-forwarded-proto"]==="https"))
+  );
   res.cookie(SESSION_COOKIE,token,{
     httpOnly:true,
-    sameSite:"lax",
-    secure:process.env.NODE_ENV==="production",
+    sameSite:isHttps?"none":"lax",
+    secure:isHttps,
     maxAge:30*24*60*60*1000,
     path:"/"
   });
+  return token;
 }
 
-export function clearSessionCookie(res){
+export function clearSessionCookie(res,req=null){
+  const isHttps = Boolean(
+    process.env.NODE_ENV==="production" ||
+    (req && (req.secure || req.headers?.["x-forwarded-proto"]==="https"))
+  );
   res.clearCookie(SESSION_COOKIE,{
     httpOnly:true,
-    sameSite:"lax",
-    secure:process.env.NODE_ENV==="production",
+    sameSite:isHttps?"none":"lax",
+    secure:isHttps,
     path:"/"
   });
 }
 
 export async function getSessionUser(req){
-  const token=req.cookies?.[SESSION_COOKIE];
+  let token=req.cookies?.[SESSION_COOKIE];
+  const authHeader=req.headers?.authorization;
+  if(!token && authHeader && typeof authHeader==="string" && authHeader.startsWith("Bearer ")){
+    token=authHeader.slice(7).trim();
+  }
   if(!token)return null;
   try{
     const {payload}=await jwtVerify(token,secret);

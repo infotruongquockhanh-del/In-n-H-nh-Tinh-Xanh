@@ -3165,21 +3165,6 @@ body.sidebar-open{
 }
 
 </style>
-<script>
-  (function(){
-    try{
-      var u = localStorage.getItem("htx_cached_user");
-      var t = localStorage.getItem("htx_session_token");
-      if (u && (t || (JSON.parse(u) && JSON.parse(u).username))) {
-        document.documentElement.classList.add("has-cached-session");
-      }
-    }catch(e){}
-  })();
-</script>
-<style>
-  html.has-cached-session .auth-gate{display:none!important}
-  html.has-cached-session .erp-shell.auth-locked{display:flex!important}
-</style>
 </head>
 <body>
 
@@ -4037,40 +4022,14 @@ body.sidebar-open{
         </div>
 
         <div class="sheets-sync-card" id="googleSheetsSyncCard" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 style="margin:0">Đồng bộ Google Sheet (Lưu trữ & Báo cáo)</h3>
-            <span class="role-badge" id="googleSheetsAutoBadge" style="background:#e6f4ea;color:#137333;font-size:12px;padding:3px 8px;border-radius:6px">Tự động đẩy khi thao tác: BẬT</span>
-          </div>
-          <p style="margin-bottom:12px">Mỗi khi bạn lưu, sửa tiến độ hoặc xoá đơn sản xuất, hệ thống sẽ tự động cập nhật ngay lên Google Sheet. Dữ liệu luôn được lưu giữ an toàn song song ở Website và Google Sheet, khi xoá ở một trong 2 nơi thì dữ liệu mới bị xoá.</p>
-
-          <div style="background:#f8f9fa;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px">
-            <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#2d3748">Cấu hình kết nối Google Sheet (Apps Script Web App)</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
-              <div>
-                <label style="font-size:12px;color:#4a5568;display:block;margin-bottom:3px">Web App URL (https://script.google.com/macros/s/.../exec)</label>
-                <input type="text" id="sheetsWebAppUrl" placeholder="Dán Web App URL của Google Apps Script" style="width:100%;padding:7px 10px;font-size:13px;border:1px solid #cbd5e1;border-radius:6px">
-              </div>
-              <div>
-                <label style="font-size:12px;color:#4a5568;display:block;margin-bottom:3px">Sync Secret (Khóa bảo mật)</label>
-                <input type="password" id="sheetsSyncSecret" placeholder="Nhập Secret (để trống nếu không đổi)" style="width:100%;padding:7px 10px;font-size:13px;border:1px solid #cbd5e1;border-radius:6px">
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-              <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer">
-                <input type="checkbox" id="sheetsAutoSyncCheck" checked>
-                Tự động đồng bộ ngay khi lưu / sửa / xóa đơn sản xuất
-              </label>
-              <button class="btn btn-green" type="button" onclick="saveGoogleSheetsConfigUI()" style="padding:6px 14px;font-size:12px">LƯU CẤU HÌNH & KIỂM TRA</button>
-            </div>
-          </div>
-
-          <div class="sheets-sync-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-blue" type="button" onclick="syncTwoWayWithGoogleSheets()">🔄 ĐỒNG BỘ 2 CHIỀU VỚI SHEET</button>
+          <h3>Đồng bộ Google Sheet</h3>
+          <p>Firestore vẫn là database chính. Google Sheet dùng để theo dõi, báo cáo, sao lưu và chỉnh dữ liệu khi cần. Không đồng bộ hash mật khẩu tài khoản sang Sheet.</p>
+          <div class="sheets-sync-actions">
             <button class="btn btn-green" type="button" onclick="pushAllToGoogleSheets()">ĐẨY TOÀN BỘ LÊN SHEET</button>
-            <button class="ghost-btn" type="button" onclick="pullAllFromGoogleSheetsAdmin()">LẤY DỮ LIỆU TỪ SHEET</button>
+            <button class="btn btn-blue" type="button" onclick="pullAllFromGoogleSheetsAdmin()">LẤY DỮ LIỆU TỪ SHEET</button>
             <button class="ghost-btn" type="button" onclick="refreshGoogleSheetsStatus()">KIỂM TRA KẾT NỐI</button>
           </div>
-          <div class="sheets-sync-status" id="googleSheetsSyncStatus" style="margin-top:10px">Chưa kiểm tra kết nối</div>
+          <div class="sheets-sync-status" id="googleSheetsSyncStatus">Chưa kiểm tra kết nối</div>
         </div>
 
         <div class="permission-note">
@@ -4759,43 +4718,7 @@ const ROLE_PERMISSIONS={
 
 const AUTH_KEY="htx_users_v6";
 const SESSION_KEY="htx_session_v6";
-const TOKEN_KEY="htx_session_token";
-const CACHED_USER_KEY="htx_cached_user";
-const DELETED_ORDERS_KEY="htx_deleted_order_ids";
 const PRICE_ADJUST_KEY="htx_price_adjustments_v6";
-
-function markOrderDeleted(id){
-  try{
-    const raw=localStorage.getItem(DELETED_ORDERS_KEY)||"[]";
-    const set=new Set(JSON.parse(raw));
-    set.add(String(id));
-    const arr=[...set].slice(-500);
-    __nativeSetItem.call(localStorage,DELETED_ORDERS_KEY,JSON.stringify(arr));
-  }catch{}
-}
-
-function isOrderDeleted(id){
-  try{
-    const raw=localStorage.getItem(DELETED_ORDERS_KEY)||"[]";
-    const set=new Set(JSON.parse(raw));
-    return set.has(String(id));
-  }catch{
-    return false;
-  }
-}
-
-function apiFetch(url,options={}){
-  const token=localStorage.getItem(TOKEN_KEY);
-  const headers=new Headers(options.headers||{});
-  if(token && !headers.has("Authorization")){
-    headers.set("Authorization",`Bearer ${token}`);
-  }
-  return fetch(url,{
-    ...options,
-    headers,
-    credentials:"include"
-  });
-}
 
 const CATALOG_OVERRIDES_KEY="htx_catalog_overrides_v7";
 const CUSTOM_PRODUCTS_KEY="htx_custom_products_v7";

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import fs from "node:fs";
 import express from "express";
 import cookieParser from "cookie-parser";
 import path from "node:path";
@@ -10,12 +11,12 @@ import {
   requireSession,
   requireDirector,
   sanitizeUser,
-  createRealtimeToken,
-  restoreUserFromFirebaseIdToken
+  createRealtimeToken
 } from "./src/auth.js";
 import {
   ensureBootstrap,
   readAllState,
+  readStateKey,
   writeStateKey,
   upsertEntity,
   deleteEntity,
@@ -24,6 +25,9 @@ import {
 } from "./src/state-store.js";
 import {
   isGoogleSheetsConfigured,
+  getActiveGoogleSheetsConfig,
+  saveGoogleSheetsConfig,
+  scheduleSheetsSync,
   pingGoogleSheets,
   syncKeyToGoogleSheets,
   syncAllToGoogleSheets,
@@ -33,7 +37,7 @@ import {
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express();
-const port=Number(process.env.PORT||8080);
+const port=3000;
 
 app.disable("x-powered-by");
 app.use((req,res,next)=>{
@@ -49,27 +53,46 @@ app.get("/api/health",(req,res)=>{
   res.json({
     ok:true,
     app:"Hành Tinh Xanh Full-stack",
-    version:26,
+    version:25,
     time:new Date().toISOString()
   });
 });
 
 
 app.get("/api/firebase-config",(req,res)=>{
+  let fileConfig={};
+  try{
+    const configPath=path.join(__dirname,"firebase-applet-config.json");
+    if(fs.existsSync(configPath)){
+      fileConfig=JSON.parse(fs.readFileSync(configPath,"utf8"));
+    }
+  }catch(err){
+    console.warn("Không đọc được firebase-applet-config.json:",err.message);
+  }
+
   const config={
-    apiKey:process.env.FIREBASE_WEB_API_KEY||"",
-    authDomain:process.env.FIREBASE_AUTH_DOMAIN||"",
-    projectId:process.env.FIREBASE_PROJECT_ID||process.env.GOOGLE_CLOUD_PROJECT||"",
-    storageBucket:process.env.FIREBASE_STORAGE_BUCKET||"",
-    messagingSenderId:process.env.FIREBASE_MESSAGING_SENDER_ID||"",
-    appId:process.env.FIREBASE_APP_ID||""
+    apiKey:process.env.FIREBASE_WEB_API_KEY||fileConfig.apiKey||"",
+    authDomain:process.env.FIREBASE_AUTH_DOMAIN||fileConfig.authDomain||"",
+    projectId:process.env.FIREBASE_PROJECT_ID||fileConfig.projectId||process.env.GOOGLE_CLOUD_PROJECT||"",
+    storageBucket:process.env.FIREBASE_STORAGE_BUCKET||fileConfig.storageBucket||"",
+    messagingSenderId:process.env.FIREBASE_MESSAGING_SENDER_ID||fileConfig.messagingSenderId||"",
+    appId:process.env.FIREBASE_APP_ID||fileConfig.appId||"",
+    firestoreDatabaseId:process.env.FIRESTORE_DATABASE_ID||fileConfig.firestoreDatabaseId||""
   };
+  console.log("[API /api/firebase-config] resolved config:", {
+    hasApiKey: !!config.apiKey,
+    hasProjectId: !!config.projectId,
+    hasAppId: !!config.appId,
+    projectId: config.projectId
+  });
   if(!config.apiKey || !config.projectId || !config.appId){
-    return res.status(503).json({
-      error:"Thiếu Firebase Web Config. Hãy cấu hình FIREBASE_WEB_API_KEY, FIREBASE_PROJECT_ID và FIREBASE_APP_ID trên Vercel."
+    return res.json({
+      configured: false,
+      config: null,
+      message: "Firebase Web Config chưa cấu hình. Ứng dụng chạy chế độ API backend."
     });
   }
-  res.json({config});
+  res.json({configured: true, config});
 });
 
 app.post("/api/auth/login",async(req,res,next)=>{
@@ -85,50 +108,21 @@ app.post("/api/auth/login",async(req,res,next)=>{
     if(!user){
       return res.status(401).json({error:"Tên đăng nhập hoặc mật khẩu không đúng."});
     }
-    await setSessionCookie(res,user);
+    const sessionToken=await setSessionCookie(res,user,req);
     const firebaseToken=await createRealtimeToken(user);
-    res.json({user:sanitizeUser(user),firebaseToken});
+    res.json({ok:true,user:sanitizeUser(user),token:sessionToken,firebaseToken});
   }catch(err){next(err)}
 });
 
 app.get("/api/auth/me",requireSession,async(req,res,next)=>{
   try{
-    // Rolling session: mỗi lần F5/khôi phục phiên sẽ gia hạn cookie.
-    await setSessionCookie(res,req.user);
     const firebaseToken=await createRealtimeToken(req.user);
-    res.json({user:sanitizeUser(req.user),firebaseToken});
+    res.json({ok:true,user:sanitizeUser(req.user),firebaseToken});
   }catch(err){next(err)}
 });
 
-app.post("/api/auth/restore",async(req,res,next)=>{
-  try{
-    const header=String(req.headers.authorization||"");
-    const match=header.match(/^Bearer\s+(.+)$/i);
-    if(!match){
-      return res.status(401).json({error:"Thiếu Firebase ID token để khôi phục phiên."});
-    }
-
-    const user=await restoreUserFromFirebaseIdToken(match[1]);
-    if(user?.disabled){
-      return res.status(403).json({error:"Tài khoản này đang bị khóa."});
-    }
-    if(!user){
-      return res.status(401).json({error:"Không thể khôi phục phiên đăng nhập."});
-    }
-
-    await setSessionCookie(res,user);
-    const firebaseToken=await createRealtimeToken(user);
-    res.json({user:sanitizeUser(user),firebaseToken});
-  }catch(err){
-    if(String(err?.code||"").startsWith("auth/")){
-      return res.status(401).json({error:"Phiên Firebase không còn hợp lệ. Vui lòng đăng nhập lại."});
-    }
-    next(err);
-  }
-});
-
 app.post("/api/auth/logout",(req,res)=>{
-  clearSessionCookie(res);
+  clearSessionCookie(res,req);
   res.json({ok:true});
 });
 
@@ -145,21 +139,12 @@ app.put("/api/state/:key",requireSession,async(req,res,next)=>{
     const value=req.body?.value;
     const result=await writeStateKey(key,value,req.user);
 
-    let sheets={skipped:true};
-    try{
-      sheets=await syncKeyToGoogleSheets(key,value,{
-        username:req.user.username,
-        role:req.user.role
-      });
-    }catch(error){
-      console.warn("Google Sheets mirror failed:",error.message);
-      sheets={ok:false,error:error.message};
-    }
+    // Tự động đẩy lên Google Sheet ngay khi lưu dữ liệu
+    scheduleSheetsSync(key,()=>readStateKey(key));
 
-    res.json({ok:true,...result,sheets});
+    res.json({ok:true,...result});
   }catch(err){next(err)}
 });
-
 
 app.put("/api/entity/:key/:id",requireSession,async(req,res,next)=>{
   try{
@@ -172,8 +157,9 @@ app.put("/api/entity/:key/:id",requireSession,async(req,res,next)=>{
     }
     const saved=await upsertEntity(key,id,item,expectedVersion,req.user);
 
-    // Google Sheet được mirror theo batch state ở các lần Push All;
-    // entity realtime ưu tiên Firestore để tránh làm chậm thao tác.
+    // Tự động đẩy lên Google Sheet ngay khi có thao tác lưu/cập nhật đơn hoặc bản ghi
+    scheduleSheetsSync(key,()=>readStateKey(key));
+
     res.json({ok:true,item:saved});
   }catch(err){next(err)}
 });
@@ -184,6 +170,10 @@ app.delete("/api/entity/:key/:id",requireSession,async(req,res,next)=>{
     const id=decodeURIComponent(req.params.id);
     const expectedVersion=Number(req.body?.expectedVersion||req.query.expectedVersion||0);
     const result=await deleteEntity(key,id,expectedVersion,req.user);
+
+    // Tự động cập nhật Google Sheet ngay khi có thao tác xóa
+    scheduleSheetsSync(key,()=>readStateKey(key));
+
     res.json(result);
   }catch(err){next(err)}
 });
@@ -201,10 +191,38 @@ app.get("/api/admin/database-summary",requireSession,requireDirector,async(req,r
   }catch(err){next(err)}
 });
 
+app.get("/api/admin/sheets/config",requireSession,requireDirector,async(req,res,next)=>{
+  try{
+    const cfg=await getActiveGoogleSheetsConfig();
+    res.json({
+      configured:cfg.configured,
+      url:cfg.url,
+      hasSecret:Boolean(cfg.secret),
+      autoSync:cfg.autoSync
+    });
+  }catch(err){next(err)}
+});
+
+app.post("/api/admin/sheets/config",requireSession,requireDirector,async(req,res,next)=>{
+  try{
+    const {url,secret,autoSync}=req.body||{};
+    const updated=await saveGoogleSheetsConfig({url,secret,autoSync});
+    res.json({
+      ok:true,
+      configured:updated.configured,
+      url:updated.url,
+      hasSecret:Boolean(updated.secret),
+      autoSync:updated.autoSync
+    });
+  }catch(err){next(err)}
+});
+
 app.get("/api/admin/sheets/status",requireSession,requireDirector,async(req,res,next)=>{
   try{
+    const cfg=await getActiveGoogleSheetsConfig();
     res.json({
-      configured:isGoogleSheetsConfigured(),
+      configured:cfg.configured,
+      autoSync:cfg.autoSync,
       status:await pingGoogleSheets()
     });
   }catch(err){next(err)}
@@ -240,11 +258,37 @@ app.post("/api/admin/sheets/pull-all",requireSession,requireDirector,async(req,r
   }catch(err){next(err)}
 });
 
+app.post("/api/admin/sheets/sync-two-way",requireSession,requireDirector,async(req,res,next)=>{
+  try{
+    const pulled=await pullAllFromGoogleSheets();
+    if(pulled?.skipped){
+      return res.status(400).json({error:"Google Sheets Sync chưa được cấu hình. Vui lòng thiết lập URL và Secret."});
+    }
+
+    const state=pulled.state||{};
+    const results={};
+    for(const key of SHEETS_SYNC_KEYS){
+      if(!(key in state))continue;
+      results[key]=await writeStateKey(key,state[key],req.user);
+    }
+
+    // Đẩy lại toàn bộ để Google Sheet cập nhật các trường được chuẩn hóa
+    const freshState=await readAllState(req.user);
+    await syncAllToGoogleSheets(freshState,{
+      username:req.user.username,
+      role:req.user.role,
+      mode:"sync_two_way"
+    });
+
+    res.json({ok:true,imported:Object.keys(results),results,message:"Đã hoàn tất đồng bộ hai chiều với Google Sheet."});
+  }catch(err){next(err)}
+});
+
 app.use(express.static(path.join(__dirname,"public"),{
   maxAge:process.env.NODE_ENV==="production"?"1h":0
 }));
 
-app.get("/",(req,res)=>{
+app.get(["/", "/index.html"],(req,res)=>{
   res.sendFile(path.join(__dirname,"public","app.html"));
 });
 
@@ -253,7 +297,7 @@ app.use((err,req,res,next)=>{
   const status=Number(err.status||500);
   res.status(status).json({
     error:status>=500
-      ?"Lỗi máy chủ. Kiểm tra cấu hình Firebase/Firestore và nhật ký Vercel."
+      ?"Lỗi máy chủ. Kiểm tra cấu hình hệ thống và nhật ký máy chủ."
       :String(err.message||"Yêu cầu không hợp lệ."),
     ...(err.currentVersion!==undefined?{currentVersion:err.currentVersion}:{})
   });
@@ -266,18 +310,14 @@ async function bootstrap(){
       console.log("Đã khởi tạo dữ liệu mặc định và tài khoản giamdoc.");
     }
   }catch(err){
-    console.error("Không khởi tạo được Firestore:",err);
+    console.error("Không khởi tạo được bootstrap:",err);
   }
 }
 
 await bootstrap();
 
-export default app;
+app.listen(port,"0.0.0.0",()=>{
+  console.log(`Hành Tinh Xanh V25 Online: http://0.0.0.0:${port}`);
+});
 
-// Chỉ listen khi chạy local bằng `npm start`.
-// Trên Vercel, Express app được export trực tiếp thành Function.
-if(!process.env.VERCEL){
-  app.listen(port,"0.0.0.0",()=>{
-    console.log(`Hành Tinh Xanh V25 Online Realtime: http://localhost:${port}`);
-  });
-}
+export default app;

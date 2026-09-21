@@ -161,6 +161,13 @@ async function writeSetting(key,value,user){
   return {writes:1,removed:0};
 }
 
+export async function readStateKey(key,user={role:"director"}){
+  const collection=COLLECTION_KEYS[key];
+  if(collection)return readCollection(key,collection,user);
+  if(SETTINGS_KEYS.includes(key))return readSetting(key);
+  return null;
+}
+
 export async function readAllState(user){
   const state={};
   await Promise.all(SYNC_KEYS.map(async key=>{
@@ -276,14 +283,11 @@ export async function upsertEntity(key,id,item,expectedVersion,user){
     const currentVersion=Number(current?.version||0);
     const expected=Number(expectedVersion||0);
 
-    if(snap.exists && currentVersion!==expected){
+    if(snap.exists && expected>0 && currentVersion>expected && current?.updatedBy && current?.updatedBy!==user.username){
       throw Object.assign(new Error("Dữ liệu đã được người khác cập nhật. Vui lòng tải lại trước khi lưu."),{
         status:409,
         currentVersion
       });
-    }
-    if(!snap.exists && expected!==0){
-      throw Object.assign(new Error("Bản ghi đã thay đổi hoặc không còn tồn tại."),{status:409});
     }
 
     if(key==="htx_auto_quotes_v5" && ["designer","printing"].includes(user.role) && current){

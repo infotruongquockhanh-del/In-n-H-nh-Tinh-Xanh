@@ -1,0 +1,6 @@
+{
+  "name": "Hành Tinh Xanh",
+  "description": "Hệ thống quản lý in ấn, báo giá tự động, đơn hàng, khách hàng, kho và doanh thu Hành Tinh Xanh",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

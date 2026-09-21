@@ -214,13 +214,3 @@ Bản V23/V24 Google Sheet sync vẫn được giữ.
 
 Firestore là database chính.
 Google Sheet chỉ dùng mirror/report/backup.
-
-
-## V26 — Session bền vững + trang chủ Đơn sản xuất + xác nhận lưu database
-
-- F5 không còn tự văng đăng nhập: session cookie được gia hạn và có cơ chế khôi phục từ Firebase Auth local persistence.
-- Sau đăng nhập hoặc F5, trang mặc định luôn là **Đơn sản xuất**.
-- Nút **LƯU ĐƠN** chỉ báo thành công sau khi backend/Firestore xác nhận lưu.
-- Đơn bị mất mạng sẽ vào hàng chờ và được retry khi online/focus lại.
-- Sau khi lưu thành công, app hydrate lại dữ liệu để nhận version mới nhất và tránh ghi đè khi nhiều nhân viên cùng sửa.
-- Service Worker dùng network-first cho HTML/navigation để tránh app bị kẹt ở source cũ sau deploy.

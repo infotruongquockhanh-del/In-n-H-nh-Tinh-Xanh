@@ -1,6 +1,6 @@
 {
   "name": "hanh-tinh-xanh-fullstack",
-  "version": "26.0.0",
+  "version": "25.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "check": "node --check server.js && node --check src/firebase-admin.js && node --check src/auth.js && node --check src/state-store.js && node --check src/google-sheets-sync.js && node --check public/realtime.js && node --check public/service-worker.js"
+    "build": "node --check server.js && node --check src/firebase-admin.js && node --check src/auth.js && node --check src/state-store.js && node --check src/local-store.js",
+    "lint": "node --check server.js && node --check src/firebase-admin.js && node --check src/auth.js && node --check src/state-store.js && node --check src/local-store.js",
+    "check": "node --check server.js && node --check src/firebase-admin.js && node --check src/auth.js && node --check src/state-store.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

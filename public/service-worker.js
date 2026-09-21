@@ -1,8 +1,7 @@
-const CACHE_NAME="htx-v26-online-shell";
+const CACHE_NAME="htx-v22-fullstack-shell";
 const APP_SHELL=[
   "/app.html",
   "/manifest.webmanifest",
-  "/realtime.js",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png"
@@ -23,37 +22,20 @@ self.addEventListener("activate",event=>{
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET")return;
   const url=new URL(event.request.url);
-
   if(url.pathname.startsWith("/api/")){
     event.respondWith(fetch(event.request));
     return;
   }
-
-  if(event.request.mode==="navigate" || url.pathname==="/" || url.pathname==="/app.html"){
-    event.respondWith(
-      fetch(event.request,{cache:"no-store"})
-        .then(response=>{
-          if(response?.ok){
-            const copy=response.clone();
-            caches.open(CACHE_NAME).then(cache=>cache.put("/app.html",copy));
-          }
-          return response;
-        })
-        .catch(()=>caches.match("/app.html"))
-    );
-    return;
-  }
-
   event.respondWith(
     caches.match(event.request).then(cached=>{
-      const network=fetch(event.request).then(response=>{
-        if(response?.ok){
+      if(cached)return cached;
+      return fetch(event.request).then(response=>{
+        if(response && response.ok && response.type==="basic"){
           const copy=response.clone();
           caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));
         }
         return response;
-      }).catch(()=>cached);
-      return cached||network;
+      }).catch(()=>caches.match("/app.html"));
     })
   );
 });

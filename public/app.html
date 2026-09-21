@@ -13,7 +13,7 @@
 <meta property="og:description" content="Hệ thống quản lý in ấn, báo giá tự động, đơn hàng, khách hàng, kho và doanh thu Hành Tinh Xanh">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<title>Hành Tinh Xanh V27.3 - Tạm tắt đăng nhập</title>
+<title>Hành Tinh Xanh V27.4 - Không đăng nhập</title>
 <style>
 :root{
   --green:#07562f;
@@ -3164,6 +3164,11 @@ body.sidebar-open{
   color:#6d7871;
 }
 
+
+/* V27.4 HARD DISABLE LOGIN */
+#authGate,.auth-gate{display:none!important;visibility:hidden!important;pointer-events:none!important}
+#erpShell.erp-shell,#erpShell.auth-locked{display:flex!important}
+html.has-cached-session #erpShell{display:flex!important}
 </style>
 <script>
   (function(){
@@ -3182,6 +3187,7 @@ body.sidebar-open{
 </style>
 </head>
 <body>
+<script>window.__HTX_NO_LOGIN__=true;</script>
 
 <div class="auth-gate hidden" id="authGate" style="display:none!important">
   <div class="auth-box">
@@ -3252,7 +3258,7 @@ body.sidebar-open{
       <div class="brand-mark">HTX</div>
       <div class="brand-text">
         <strong>HÀNH TINH XANH</strong>
-        <span>Báo giá & Quản lý đơn in ấn</span>
+        <span>Báo giá & Quản lý đơn in ấn · V27.4</span>
       </div>
     </div>
 
@@ -5460,19 +5466,15 @@ function showAuthMessage(msg,type="error"){
 }
 
 function showLogin(){
-  // Đăng nhập đang được tạm tắt.
-  if($("authGate"))$("authGate").style.display="none";
-  if($("erpShell"))$("erpShell").classList.remove("auth-locked");
+  if($("authGate")){
+    $("authGate").classList.add("hidden");
+    $("authGate").style.display="none";
+  }
+  if($("erpShell")){
+    $("erpShell").classList.remove("auth-locked");
+    $("erpShell").style.display="flex";
+  }
   return;
-  $("erpShell").classList.add("auth-locked");
-  $("loginForm").style.display="block";
-  $("firstAccountForm").style.display="none";
-  $("authTitle").textContent="Đăng nhập";
-  $("authDesc").textContent="Nhập tài khoản và mật khẩu để sử dụng phần mềm.";
-  showAuthMessage("");
-  const users=getUsers();
-  $("showCreateFirstBtn").textContent=users.length?"TẠO TÀI KHOẢN":"TẠO TÀI KHOẢN ĐẦU TIÊN";
-  $("showCreateFirstBtn").style.display="none";
 }
 
 function showFirstAccountForm(){
@@ -6005,9 +6007,12 @@ function setupPwa(){
   });
 
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
-    navigator.serviceWorker.register("/service-worker.js?v=27.3",{updateViaCache:"none"})
-      .then(reg=>reg.update().catch(()=>{}))
-      .catch(err=>console.warn("SW:",err));
+    navigator.serviceWorker.getRegistrations()
+      .then(regs=>Promise.all(regs.map(reg=>reg.unregister())))
+      .catch(()=>{});
+    if(window.caches){
+      caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).catch(()=>{});
+    }
   }
 }
 
@@ -9648,6 +9653,6 @@ async function saveAndExport(){
 }
 init();
 </script>
-<script type="module" src="/realtime.js?v=27.3"></script>
+<script type="module" src="/realtime.js?v=27.4"></script>
 </body>
 </html>

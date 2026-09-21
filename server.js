@@ -57,6 +57,9 @@ app.use((req,res,next)=>{
     res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");
     res.setHeader("Pragma","no-cache");
     res.setHeader("Expires","0");
+    if(req.path==="/" || req.path==="/index.html" || req.path==="/app.html"){
+      res.setHeader("Clear-Site-Data","\"cache\"");
+    }
   }
   next();
 });
@@ -68,7 +71,7 @@ app.get("/api/health",async(req,res)=>{
   res.status(database.connected?200:503).json({
     ok:database.connected,
     app:"Hành Tinh Xanh Full-stack",
-    version:"27.3",
+    version:"27.4",
     commit:process.env.VERCEL_GIT_COMMIT_SHA||null,
     deployment:process.env.VERCEL_URL||null,
     database,

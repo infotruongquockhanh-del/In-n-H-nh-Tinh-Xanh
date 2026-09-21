@@ -13,7 +13,7 @@
 <meta property="og:description" content="Hệ thống quản lý in ấn, báo giá tự động, đơn hàng, khách hàng, kho và doanh thu Hành Tinh Xanh">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<title>Hành Tinh Xanh</title>
+<title>Hành Tinh Xanh V27.1 - Online Firestore</title>
 <style>
 :root{
   --green:#07562f;
@@ -3241,7 +3241,7 @@ body.sidebar-open{
     <div class="auth-msg" id="authMsg"></div>
     <div class="auth-note">
       <b>Tài khoản Giám đốc mặc định:</b> giamdoc &nbsp; | &nbsp; <b>Mật khẩu:</b> 123456<br>
-      Bản Online V25 xác thực qua backend, lưu dữ liệu trên Cloud Firestore và nhận thay đổi realtime từ các nhân viên khác. Sau lần đăng nhập đầu tiên nên đổi mật khẩu Giám đốc.
+      <b>Build V27.1 Online Firestore</b><br>Đăng nhập qua backend Vercel, dữ liệu lưu trên Cloud Firestore và đồng bộ realtime giữa các nhân viên. Nếu không đăng nhập được, thông báo bên trên sẽ hiển thị lỗi kết nối database cụ thể.
     </div>
   </div>
 </div>
@@ -6005,7 +6005,9 @@ function setupPwa(){
   });
 
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
-    navigator.serviceWorker.register("./service-worker.js").catch(err=>console.warn("SW:",err));
+    navigator.serviceWorker.register("/service-worker.js?v=27.1",{updateViaCache:"none"})
+      .then(reg=>reg.update().catch(()=>{}))
+      .catch(err=>console.warn("SW:",err));
   }
 }
 
@@ -9632,6 +9634,6 @@ async function saveAndExport(){
 }
 init();
 </script>
-<script type="module" src="/realtime.js"></script>
+<script type="module" src="/realtime.js?v=27.1"></script>
 </body>
 </html>

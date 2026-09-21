@@ -30,12 +30,12 @@ let firebaseInitError=null;
 let credentialSource="none";
 
 function resolveCredential(){
-  const json=parseJsonCredential(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const json=parseJsonCredential(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_ADMIN_CREDENTIALS || process.env.FIREBASE_ADMIN_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   if(json){credentialSource="service_account_json";return cert(json)}
   const b64=parseBase64Credential(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64);
   if(b64){credentialSource="service_account_base64";return cert(b64)}
-  const email=String(process.env.FIREBASE_CLIENT_EMAIL||"").trim();
-  const key=normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+  const email=String(process.env.FIREBASE_CLIENT_EMAIL||process.env.FIREBASE_ADMIN_CLIENT_EMAIL||"").trim();
+  const key=normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY||process.env.FIREBASE_ADMIN_PRIVATE_KEY);
   if(email&&key&&firebaseProjectId){credentialSource="service_account_fields";return cert({projectId:firebaseProjectId,clientEmail:email,privateKey:key})}
   if(!process.env.VERCEL){credentialSource="application_default";return applicationDefault()}
   throw new Error("Thiếu Firebase Admin credentials trên Vercel. Cấu hình FIREBASE_SERVICE_ACCOUNT_JSON hoặc FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.");
@@ -59,7 +59,7 @@ export const adminAuth=authInstance||unavailableAuth;
 export function getFirebaseDiagnostics(){
   const missing=[];
   if(!firebaseProjectId)missing.push("FIREBASE_PROJECT_ID");
-  if(process.env.VERCEL&&credentialSource==="none")missing.push("FIREBASE_SERVICE_ACCOUNT_JSON hoặc FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY");
+  if(process.env.VERCEL&&credentialSource==="none")missing.push("Firebase Admin credential: FIREBASE_SERVICE_ACCOUNT_JSON (khuyến nghị) hoặc FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY");
   return {initialized:Boolean(firestoreInstance),projectId:firebaseProjectId||null,databaseId:firestoreDatabaseId||"(default)",credentialSource,localStoreEnabled:allowLocalStore,missing,error:firebaseInitError?.message||null};
 }
 export async function verifyFirebaseConnection(){

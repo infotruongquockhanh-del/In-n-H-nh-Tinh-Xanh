@@ -46,6 +46,18 @@ app.use((req,res,next)=>{
   res.setHeader("X-Content-Type-Options","nosniff");
   res.setHeader("Referrer-Policy","same-origin");
   res.setHeader("Permissions-Policy","camera=(), microphone=(), geolocation=()");
+  if(
+    req.path==="/" ||
+    req.path==="/index.html" ||
+    req.path==="/app.html" ||
+    req.path==="/service-worker.js" ||
+    req.path==="/realtime.js" ||
+    req.path==="/manifest.webmanifest"
+  ){
+    res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma","no-cache");
+    res.setHeader("Expires","0");
+  }
   next();
 });
 app.use(express.json({limit:"8mb"}));
@@ -56,7 +68,9 @@ app.get("/api/health",async(req,res)=>{
   res.status(database.connected?200:503).json({
     ok:database.connected,
     app:"Hành Tinh Xanh Full-stack",
-    version:27,
+    version:"27.1",
+    commit:process.env.VERCEL_GIT_COMMIT_SHA||null,
+    deployment:process.env.VERCEL_URL||null,
     database,
     time:new Date().toISOString()
   });
@@ -311,7 +325,14 @@ app.post("/api/admin/sheets/sync-two-way",requireSession,requireDirector,async(r
 });
 
 app.use(express.static(path.join(__dirname,"public"),{
-  maxAge:process.env.NODE_ENV==="production"?"1h":0
+  maxAge:0,
+  etag:true,
+  lastModified:true,
+  setHeaders(res,filePath){
+    if(/(?:app\.html|service-worker\.js|realtime\.js|manifest\.webmanifest)$/.test(filePath)){
+      res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");
+    }
+  }
 }));
 
 app.get(["/", "/index.html"],(req,res)=>{

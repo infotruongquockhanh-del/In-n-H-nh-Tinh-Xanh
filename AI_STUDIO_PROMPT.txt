@@ -1,0 +1,47 @@
+Bạn đang mở codebase Hành Tinh Xanh Full-stack V22.
+
+MỤC TIÊU:
+1. Giữ nguyên toàn bộ frontend trong public/app.html và toàn bộ nghiệp vụ/bảng giá hiện có.
+2. Dùng Node.js backend trong server.js.
+3. Dùng Cloud Firestore làm database.
+4. Không chuyển dữ liệu quay lại localStorage-only. localStorage chỉ là cache/offline; dữ liệu cloud là dữ liệu dùng chung.
+5. Giữ nguyên phân quyền:
+   - Giám đốc toàn quyền, được xóa khách hàng và xóa từng đơn.
+   - Kế toán: dashboard, báo giá, đơn, khách, bảng giá, tồn kho, payroll.
+   - Sale: dashboard, báo giá, đơn, khách, bảng giá, tồn kho.
+   - Thiết kế: xử lý tiến độ đơn + khách.
+   - In ấn: tiến độ đơn + tháng làm việc.
+6. Không thay đổi 17 bảng giá gốc.
+7. Kiểm tra build/runtime, sửa mọi lỗi trước khi Publish.
+8. Kết nối Firebase/Firestore của chính project AI Studio đang dùng.
+9. Đặt SESSION_SECRET trong server-side Secrets, không đưa secret vào frontend.
+10. Publish lên Cloud Run và đảm bảo PWA /app.html hoạt động trên PC + mobile.
+
+SAU KHI IMPORT:
+- Kiểm tra package.json và chạy npm install.
+- Kiểm tra Firestore project/permissions cho Cloud Run service account.
+- Deploy firestore.rules nếu dùng Firebase CLI.
+- Chạy app và thử đăng nhập:
+  username: giamdoc
+  password: 123456
+- Sau khi đăng nhập đầu tiên, nhắc đổi mật khẩu Giám đốc.
+
+
+BỔ SUNG GOOGLE SHEET / APPS SCRIPT V23:
+- Firestore vẫn là database chính.
+- Cấu hình GOOGLE_SHEETS_WEBAPP_URL và GOOGLE_SHEETS_SYNC_SECRET bằng server-side Secrets.
+- Không đưa secret vào frontend.
+- Dùng src/google-sheets-sync.js để mirror dữ liệu.
+- Kiểm tra:
+  GET /api/admin/sheets/status
+  POST /api/admin/sheets/push-all
+  POST /api/admin/sheets/pull-all
+- Không đồng bộ passwordHash sang Google Sheet.
+- Đọc apps-script/README.md.
+
+
+V24 SCROLL FIX:
+- Không được đặt body/html overflow:hidden cho toàn app.
+- Trang chính phải luôn cuộn được bằng mouse wheel, trackpad và touch.
+- Sidebar mobile chỉ dùng overlay/class, không khóa body.
+- Giữ hàm ensureAppScrollUnlocked() và setupScrollRecovery().

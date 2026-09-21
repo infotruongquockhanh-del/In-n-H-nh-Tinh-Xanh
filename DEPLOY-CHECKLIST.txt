@@ -1,0 +1,29 @@
+HÀNH TINH XANH V25 - CHECKLIST ĐƯA WEBSITE ONLINE
+
+1. Push toàn bộ source V25 lên GitHub.
+2. Tạo Firebase Project.
+3. Bật Cloud Firestore.
+4. Bật Firebase Authentication.
+5. Tạo Firebase Web App.
+6. Deploy firestore.rules.
+7. Import GitHub repo vào Vercel.
+8. Vercel > Settings > Environment Variables: nhập đầy đủ Firebase Admin + Firebase Web config.
+9. Redeploy.
+10. Mở /api/health: phải trả ok:true.
+11. Đăng nhập giamdoc / 123456.
+12. Thanh trên phải hiện Realtime đang hoạt động.
+13. Mở 2 máy khác nhau, tạo/chỉnh đơn và kiểm tra cập nhật ngay.
+
+BIẾN MÔI TRƯỜNG BẮT BUỘC:
+- FIREBASE_PROJECT_ID
+- FIREBASE_SERVICE_ACCOUNT_JSON
+- SESSION_SECRET
+- FIREBASE_WEB_API_KEY
+- FIREBASE_AUTH_DOMAIN
+- FIREBASE_APP_ID
+- FIREBASE_MESSAGING_SENDER_ID
+- FIREBASE_STORAGE_BUCKET (nếu project có dùng)
+
+GOOGLE SHEET (TÙY CHỌN):
+- GOOGLE_SHEETS_WEBAPP_URL
+- GOOGLE_SHEETS_SYNC_SECRET

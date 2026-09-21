@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function role() {
+      return signedIn() ? request.auth.token.role : null;
+    }
+    function payrollAllowed() {
+      return role() == "director" || role() == "accounting";
+    }
+
+    // Frontend realtime listeners: READ ONLY.
+    match /orders/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /customers/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /inventory/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /customProducts/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /settings/{id} {
+      allow read: if signedIn()
+        && (id != "htx_payroll_v17" || payrollAllowed());
+      allow write: if false;
+    }
+
+    // Không expose users/passwordHash trực tiếp cho frontend.
+    match /users/{id} {
+      allow read, write: if false;
+    }
+
+    match /auditLogs/{id} {
+      allow read, write: if false;
+    }
+    match /config/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

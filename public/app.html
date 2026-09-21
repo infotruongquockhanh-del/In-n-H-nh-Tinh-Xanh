@@ -13,7 +13,7 @@
 <meta property="og:description" content="Hệ thống quản lý in ấn, báo giá tự động, đơn hàng, khách hàng, kho và doanh thu Hành Tinh Xanh">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<title>Hành Tinh Xanh V27.4 - Không đăng nhập</title>
+<title>Hành Tinh Xanh V28 - Tổng quan tối ưu</title>
 <style>
 :root{
   --green:#07562f;
@@ -3169,6 +3169,47 @@ body.sidebar-open{
 #authGate,.auth-gate{display:none!important;visibility:hidden!important;pointer-events:none!important}
 #erpShell.erp-shell,#erpShell.auth-locked{display:flex!important}
 html.has-cached-session #erpShell{display:flex!important}
+/* ===== V28 UI TỐI ƯU ===== */
+.dashboard-compact-hero{margin-bottom:14px}
+.dashboard-month-toolbar{margin:0 0 14px}
+.dashboard-month-metrics{margin:14px 0}
+.dashboard-month-orders-panel{margin-top:16px}
+.dashboard-action-table{min-width:980px}
+.order-card-with-priority{
+  position:relative;
+  overflow:hidden;
+  padding-left:58px!important;
+}
+.order-card-main{min-width:0}
+.order-priority-column{
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:46px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  font-family:"UTM AvoBold","UTM Avo",Arial,sans-serif;
+  font-size:10px;
+  letter-spacing:1.2px;
+  border-right:1px solid #e2e7e4;
+}
+.order-priority-column.urgent{
+  background:#cf302b;
+  color:#fff;
+  border-color:#cf302b;
+}
+.order-priority-column.normal{
+  background:#f3f6f4;
+  color:#8a958f;
+}
+.sidebar-info,.install-app-btn{display:none!important}
+@media(max-width:760px){
+  .order-card-with-priority{padding-left:48px!important}
+  .order-priority-column{width:38px;font-size:9px}
+  .dashboard-action-table{min-width:820px}
+}
 </style>
 <script>
   (function(){
@@ -3258,14 +3299,13 @@ html.has-cached-session #erpShell{display:flex!important}
       <div class="brand-mark">HTX</div>
       <div class="brand-text">
         <strong>HÀNH TINH XANH</strong>
-        <span>Báo giá & Quản lý đơn in ấn · V27.4</span>
+        <span>Báo giá & Quản lý đơn in ấn · V28</span>
       </div>
     </div>
 
     <div class="nav-title">Điều hành</div>
     <nav class="nav-menu">
       <button class="nav-btn" data-page="dashboard"><span class="nav-icon">▦</span><span>Tổng quan</span></button>
-      <button class="nav-btn" data-page="workmonth"><span class="nav-icon">◫</span><span>Tháng làm việc</span></button>
       <button class="nav-btn" data-page="quote"><span class="nav-icon">＋</span><span>Tạo báo giá</span></button>
       <button class="nav-btn active" data-page="orders"><span class="nav-icon">▤</span><span>Đơn sản xuất</span></button>
       <button class="nav-btn" data-page="customers"><span class="nav-icon">◎</span><span>Khách hàng</span></button>
@@ -3274,11 +3314,6 @@ html.has-cached-session #erpShell{display:flex!important}
       <button class="nav-btn" data-page="payroll"><span class="nav-icon">◷</span><span>Lương & Chấm công</span></button>
       <button class="nav-btn" data-page="accounts"><span class="nav-icon">♙</span><span>Tài khoản & phân quyền</span></button>
     </nav>
-
-    <div class="sidebar-info">
-      <strong>Chế độ Offline</strong>
-      <span>Dữ liệu lưu trực tiếp trên trình duyệt. Không cần hosting hoặc Internet để vận hành phần mềm.</span>
-    </div>
   </aside>
   <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
 
@@ -3302,29 +3337,34 @@ html.has-cached-session #erpShell{display:flex!important}
           <div><strong id="currentUserName">Người dùng</strong><span id="currentUserRole">Vai trò</span></div>
         </div>
         <span class="cloud-sync-badge offline" id="cloudSyncStatus" title="Trạng thái đồng bộ dữ liệu">Cloud: đang kết nối</span>
-        <button class="install-app-btn" id="installAppBtn" type="button" title="Cài phần mềm như một ứng dụng">Cài app</button>
         <button class="quick-btn" id="topNewQuote">+ Tạo báo giá mới</button>
         <button class="logout-btn" id="logoutBtn">Đăng xuất</button>
       </div>
     </header>
 
     <main class="page-host">
-      <!-- DASHBOARD -->
+      <!-- DASHBOARD + THÁNG LÀM VIỆC -->
       <section class="app-page" id="page-dashboard">
-        <div class="hero">
+        <div class="hero dashboard-compact-hero">
           <div>
-            <h2>Quản lý in ấn gọn trong một màn hình</h2>
-            <p>Giữ nguyên toàn bộ 17 bảng giá Hành Tinh Xanh, tự động tính giá, theo dõi tiến độ sản xuất, công nợ và xuất Excel ngay trên trình duyệt.</p>
+            <h2>Tổng quan & Tháng làm việc</h2>
+            <p>Theo dõi doanh thu, công nợ, đơn cần xử lý và hoạt động của tháng đang chọn trên cùng một màn hình.</p>
           </div>
           <div class="hero-actions">
             <button class="hero-btn primary" onclick="newQuote()">+ Tạo báo giá</button>
-            <button class="hero-btn" onclick="navigate('orders')">Xem đơn sản xuất</button>
+            <button class="hero-btn" onclick="navigate('orders')">Đơn sản xuất</button>
           </div>
+        </div>
+
+        <div class="month-toolbar dashboard-month-toolbar">
+          <strong>Tháng làm việc:</strong>
+          <input id="workMonthPicker" type="month" value="2026-09">
+          <span class="muted" id="workMonthLabel">Tháng 09/2026</span>
         </div>
 
         <div class="finance-kpi-grid">
           <div class="finance-kpi positive">
-            <span>Giá trị đơn tháng đang chọn</span>
+            <span>Giá trị đơn tháng</span>
             <strong id="finMonthRevenue">0 đ</strong>
             <small id="finMonthRevenueMeta">Tháng 09/2026</small>
           </div>
@@ -3339,7 +3379,7 @@ html.has-cached-session #erpShell{display:flex!important}
             <small id="finMonthDebtMeta">0 đơn chưa thu</small>
           </div>
           <div class="finance-kpi">
-            <span>Đơn tháng này</span>
+            <span>Số đơn trong tháng</span>
             <strong id="finMonthOrders">0</strong>
             <small id="finMonthOrdersMeta">Giá trị TB: 0 đ</small>
           </div>
@@ -3353,6 +3393,13 @@ html.has-cached-session #erpShell{display:flex!important}
             <strong id="finAllDebt">0 đ</strong>
             <small id="finAllDebtMeta">0 khách còn nợ</small>
           </div>
+        </div>
+
+        <div class="metric-grid dashboard-month-metrics">
+          <div class="metric-card"><div class="metric-label">ĐƠN TRONG THÁNG</div><div class="metric-value" id="monthOrders">0</div></div>
+          <div class="metric-card"><div class="metric-label">DOANH THU THÁNG</div><div class="metric-value" id="monthRevenue">0 đ</div></div>
+          <div class="metric-card"><div class="metric-label">ĐÃ GIAO</div><div class="metric-value" id="monthDelivered">0</div></div>
+          <div class="metric-card"><div class="metric-label">CHƯA THU TIỀN</div><div class="metric-value" id="monthUnpaid">0 đ</div></div>
         </div>
 
         <div class="dashboard-alert-grid">
@@ -3375,6 +3422,36 @@ html.has-cached-session #erpShell{display:flex!important}
             <span>Đơn chưa thu tiền</span>
             <strong id="dashUnpaidOrders">0</strong>
             <small id="dashUnpaidAmount">0 đ công nợ</small>
+          </div>
+        </div>
+
+        <div class="panel action-orders-panel">
+          <div class="panel-head">
+            <div>
+              <h3>Đơn cần theo dõi</h3>
+              <div class="followup-caption"><span>Ưu tiên hiển thị GẤP, quá hạn, sắp giao và chưa thu tiền</span></div>
+            </div>
+            <button class="ghost-btn" onclick="navigate('orders')">Mở Đơn sản xuất</button>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <div class="action-orders-wrap">
+              <table class="action-orders-table dashboard-action-table">
+                <thead>
+                  <tr>
+                    <th>Ưu tiên</th>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Tiến độ</th>
+                    <th>Giao dự kiến</th>
+                    <th>Tổng đơn</th>
+                    <th>Còn lại</th>
+                    <th>Thanh toán</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardActionOrders"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -3412,48 +3489,11 @@ html.has-cached-session #erpShell{display:flex!important}
           </div>
         </div>
 
-        <div class="panel action-orders-panel">
-          <div class="panel-head">
-            <div>
-              <h3>Đơn cần theo dõi & báo khách</h3>
-              <div class="followup-caption">
-                <span>Ưu tiên: GẤP → quá hạn → sắp giao → chưa thu tiền</span>
-              </div>
-            </div>
-            <button class="ghost-btn" onclick="navigate('orders')">Mở Đơn sản xuất</button>
-          </div>
-          <div class="panel-body" style="padding:0">
-            <div class="action-orders-wrap">
-              <table class="action-orders-table">
-                <thead>
-                  <tr>
-                    <th>Ưu tiên</th>
-                    <th>Mã đơn</th>
-                    <th>Khách hàng</th>
-                    <th>Tiến độ</th>
-                    <th>Giao dự kiến</th>
-                    <th>Tiền hàng</th>
-                    <th>Thiết kế</th>
-                    <th>Phí ship</th>
-                    <th>VAT</th>
-                    <th>Tổng đơn</th>
-                    <th>Đặt cọc</th>
-                    <th>Còn lại sau cọc</th>
-                    <th>Thanh toán</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody id="dashboardActionOrders"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
         <div class="finance-board">
           <div class="panel">
             <div class="panel-head">
               <h3>Giá trị đơn & dòng tiền theo tháng</h3>
-              <span>6 tháng gần nhất theo dữ liệu đơn hàng</span>
+              <span>6 tháng gần nhất</span>
             </div>
             <div class="panel-body finance-table-wrap">
               <table class="finance-table">
@@ -3476,7 +3516,7 @@ html.has-cached-session #erpShell{display:flex!important}
           <div class="panel">
             <div class="panel-head">
               <h3>Chỉ số điều hành</h3>
-              <span>Tập trung vào dòng tiền & hiệu suất</span>
+              <span>Tháng đang chọn</span>
             </div>
             <div class="panel-body">
               <div class="finance-highlight">
@@ -3498,75 +3538,13 @@ html.has-cached-session #erpShell{display:flex!important}
           </div>
         </div>
 
-        <div class="overview-table-wrap">
-          <table class="overview-table">
-            <thead>
-              <tr>
-                <th>Nhóm theo dõi</th>
-                <th>Chỉ tiêu / Vật tư</th>
-                <th>Kích thước</th>
-                <th>Số lượng / ĐVT</th>
-                <th>Giá trị</th>
-                <th>Trạng thái / Ghi chú</th>
-              </tr>
-            </thead>
-            <tbody id="overviewManagementBody"></tbody>
-          </table>
-        </div>
-
-        <div class="dashboard-grid v9">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Tiến độ sản xuất</h3>
-              <span>Phân bổ đơn theo 5 công đoạn</span>
-            </div>
-            <div class="panel-body">
-              <div class="stage-list" id="dashboardStages"></div>
-            </div>
+        <div class="panel dashboard-month-orders-panel">
+          <div class="panel-head">
+            <h3>Đơn trong tháng đang chọn</h3>
+            <span>Tối đa 20 đơn mới nhất trong tháng</span>
           </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Đơn gần đây</h3>
-              <button class="ghost-btn" onclick="navigate('orders')">Xem tất cả</button>
-            </div>
-            <div class="panel-body" style="padding:0;overflow:auto">
-              <div id="dashboardRecent"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- THÁNG LÀM VIỆC -->
-      <section class="app-page" id="page-workmonth">
-        <div class="page-title-row">
-          <div>
-            <h2>Tháng làm việc</h2>
-            <p>Tổng hợp hoạt động theo tháng. Mặc định hiện tại: tháng 09/2026.</p>
-          </div>
-        </div>
-
-        <div class="month-toolbar">
-          <strong>Chọn tháng:</strong>
-          <input id="workMonthPicker" type="month" value="2026-09">
-          <span class="muted" id="workMonthLabel">Tháng 09/2026</span>
-        </div>
-
-        <div class="metric-grid" style="margin-top:0">
-          <div class="metric-card"><div class="metric-label">ĐƠN TRONG THÁNG</div><div class="metric-value" id="monthOrders">0</div></div>
-          <div class="metric-card"><div class="metric-label">DOANH THU THÁNG</div><div class="metric-value" id="monthRevenue">0 đ</div></div>
-          <div class="metric-card"><div class="metric-label">ĐÃ GIAO</div><div class="metric-value" id="monthDelivered">0</div></div>
-          <div class="metric-card"><div class="metric-label">CHƯA THU TIỀN</div><div class="metric-value" id="monthUnpaid">0 đ</div></div>
-        </div>
-
-        <div class="dashboard-grid">
-          <div class="panel">
-            <div class="panel-head"><h3>Tiến độ trong tháng</h3><span id="monthStageCaption"></span></div>
-            <div class="panel-body"><div class="stage-list" id="monthStages"></div></div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h3>Đơn trong tháng</h3><span>Tối đa 20 đơn gần nhất</span></div>
-            <div class="panel-body"><div id="monthOrderList" class="month-orders"></div></div>
+          <div class="panel-body">
+            <div id="monthOrderList" class="month-orders"></div>
           </div>
         </div>
       </section>
@@ -4756,11 +4734,11 @@ const ROLE_LABELS={
 };
 
 const ROLE_PERMISSIONS={
-  director:["dashboard","workmonth","quote","orders","customers","pricebook","inventory","payroll","accounts","priceAdjust","payment","deleteOrder","deleteCustomer","assignDesigner"],
-  accounting:["dashboard","workmonth","quote","orders","customers","pricebook","inventory","payroll","priceAdjust","payment","assignDesigner"],
-  sales:["dashboard","workmonth","quote","orders","customers","pricebook","inventory","priceAdjust","payment","assignDesigner"],
+  director:["dashboard","quote","orders","customers","pricebook","inventory","payroll","accounts","priceAdjust","payment","deleteOrder","deleteCustomer","assignDesigner"],
+  accounting:["dashboard","quote","orders","customers","pricebook","inventory","payroll","priceAdjust","payment","assignDesigner"],
+  sales:["dashboard","quote","orders","customers","pricebook","inventory","priceAdjust","payment","assignDesigner"],
   designer:["orders","customers"],
-  printing:["workmonth","orders","customers"]
+  printing:["dashboard","orders","customers"]
 };
 
 const AUTH_KEY="htx_users_v6";
@@ -5673,7 +5651,7 @@ function enterApp(){
   if($("userAvatar"))$("userAvatar").textContent=(currentUser.name||currentUser.username||"U").charAt(0).toUpperCase();
   applyPermissions();
   refreshDesignerControls();
-  const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","workmonth","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
+  const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
   navigate(hasPagePermission("orders")?"orders":(allowed[0]||"orders"),true);
 }
 
@@ -6495,7 +6473,6 @@ function init(){
   updateOrderEditUI();
   updateItemEditUI();
   setupResponsiveObserver();
-  setupPwa();
   setupScrollRecovery();
   $("loginUsername").value="giamdoc";
   restoreSession();
@@ -7436,13 +7413,7 @@ function renderHistory(){
     if(designerFilter==="unassigned" && x.designerId)return false;
     if(designerFilter && designerFilter!=="unassigned" && Number(x.designerId)!==Number(designerFilter))return false;
     return true;
-  }).sort((a,b)=>{
-    if(!!a.urgent!==!!b.urgent)return a.urgent?-1:1;
-    const ad=a.expectedDelivery?new Date(a.expectedDelivery).getTime():Infinity;
-    const bd=b.expectedDelivery?new Date(b.expectedDelivery).getTime():Infinity;
-    if(ad!==bd)return ad-bd;
-    return Number(b.id||0)-Number(a.id||0);
-  });
+  }).sort((a,b)=>Number(b.id||0)-Number(a.id||0));
 
   if(!list.length){
     box.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><strong>Không có đơn phù hợp</strong>Thử thay đổi bộ lọc hoặc tạo một báo giá mới.</div>`;
@@ -7458,61 +7429,64 @@ function renderHistory(){
     }).join("");
 
     const dClass=deliveryClass(x.expectedDelivery,currentStatus);
-    return `<div class="order-card ${x.urgent?"urgent-order":""}">
-      <div class="order-head">
-        <div>
-          <span class="order-code">${esc(x.orderCode||makeOrderCode(x.id))}</span>
-          <strong>${esc(x.customer||"Quý Khách Hàng")}</strong>
-          <span class="muted">${esc(x.createdAt||"")} • ${Number(x.count||x.items?.length||0)} hạng mục</span>
-          <div class="order-head-meta">
-            ${x.urgent?`<span class="urgent-badge">⚡ GẤP</span>`:""}
-            ${x.expectedDelivery?`<span class="delivery-badge ${dClass}">Giao dự kiến: ${esc(formatDelivery(x.expectedDelivery))}</span>`:""}
-            ${x.designerName?`<span class="designer-badge">✦ Thiết kế: ${esc(x.designerName)}</span>`:`<span class="designer-badge">✦ Chưa phân công thiết kế</span>`}
-            ${depositInfoFromQuote(x).amount?`<span class="delivery-badge">Cọc: ${money(depositInfoFromQuote(x).amount)}</span>`:""}
-            ${x.paymentMethod?`<span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>`:""}
+    const priorityColumn=`<div class="order-priority-column ${x.urgent?"urgent":"normal"}">${x.urgent?"GẤP":"MỚI"}</div>`;
+    return `<div class="order-card order-card-with-priority ${x.urgent?"urgent-order":""}">
+      ${priorityColumn}
+      <div class="order-card-main">
+        <div class="order-head">
+          <div>
+            <span class="order-code">${esc(x.orderCode||makeOrderCode(x.id))}</span>
+            <strong>${esc(x.customer||"Quý Khách Hàng")}</strong>
+            <span class="muted">${esc(x.createdAt||"")} • ${Number(x.count||x.items?.length||0)} hạng mục</span>
+            <div class="order-head-meta">
+              ${x.expectedDelivery?`<span class="delivery-badge ${dClass}">Giao dự kiến: ${esc(formatDelivery(x.expectedDelivery))}</span>`:""}
+              ${x.designerName?`<span class="designer-badge">✦ Thiết kế: ${esc(x.designerName)}</span>`:`<span class="designer-badge">✦ Chưa phân công thiết kế</span>`}
+              ${depositInfoFromQuote(x).amount?`<span class="delivery-badge">Cọc: ${money(depositInfoFromQuote(x).amount)}</span>`:""}
+              ${x.paymentMethod?`<span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>`:""}
+            </div>
+          </div>
+          <div class="order-total">${money(x.total||x.totals?.grand||0)}</div>
+        </div>
+
+        <div class="progress-steps">${steps}</div>
+
+        <div class="designer-assignment">
+          <span class="muted">Thiết kế phụ trách:</span>
+          ${hasPermission("assignDesigner")?`
+            <select class="control" onchange="setOrderDesigner(${x.id},this.value)">
+              <option value=""${!x.designerId?" selected":""}>Chưa phân công</option>
+              ${getActiveDesigners().map(u=>`<option value="${u.id}"${Number(x.designerId)===Number(u.id)?" selected":""}>${esc(u.name||u.username)}</option>`).join("")}
+            </select>
+          `:`<span class="designer-badge">${esc(x.designerName||"Chưa phân công")}</span>`}
+        </div>
+
+        <div class="payment-row">
+          <span class="muted">Hiện tại: <b>${esc(currentStatus)}</b></span>
+          <div class="order-payment-controls">
+            ${hasPermission("payment")?`
+              <select class="control order-payment-select" onchange="setOrderPaymentMethod(${x.id},this.value)">
+                <option value=""${!x.paymentMethod?" selected":""}>Chọn cách thu tiền</option>
+                <option value="cash"${x.paymentMethod==="cash"?" selected":""}>Thu tiền mặt</option>
+                <option value="personal_transfer"${x.paymentMethod==="personal_transfer"?" selected":""}>Thu chuyển khoản cá nhân</option>
+                <option value="company_transfer"${x.paymentMethod==="company_transfer"?" selected":""}>Thu chuyển khoản công ty</option>
+              </select>
+              <button class="paid-btn ${x.paid?"paid":""}" onclick="toggleOrderPaid(${x.id})">
+                ${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}
+              </button>
+            `:`
+              <span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>
+              <span class="role-badge ${x.paid?"":"printing"}">${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}</span>
+            `}
           </div>
         </div>
-        <div class="order-total">${money(x.total||x.totals?.grand||0)}</div>
-      </div>
 
-      <div class="progress-steps">${steps}</div>
-
-      <div class="designer-assignment">
-        <span class="muted">Thiết kế phụ trách:</span>
-        ${hasPermission("assignDesigner")?`
-          <select class="control" onchange="setOrderDesigner(${x.id},this.value)">
-            <option value=""${!x.designerId?" selected":""}>Chưa phân công</option>
-            ${getActiveDesigners().map(u=>`<option value="${u.id}"${Number(x.designerId)===Number(u.id)?" selected":""}>${esc(u.name||u.username)}</option>`).join("")}
-          </select>
-        `:`<span class="designer-badge">${esc(x.designerName||"Chưa phân công")}</span>`}
-      </div>
-
-      <div class="payment-row">
-        <span class="muted">Hiện tại: <b>${esc(currentStatus)}</b></span>
-        <div class="order-payment-controls">
-          ${hasPermission("payment")?`
-            <select class="control order-payment-select" onchange="setOrderPaymentMethod(${x.id},this.value)">
-              <option value=""${!x.paymentMethod?" selected":""}>Chọn cách thu tiền</option>
-              <option value="cash"${x.paymentMethod==="cash"?" selected":""}>Thu tiền mặt</option>
-              <option value="personal_transfer"${x.paymentMethod==="personal_transfer"?" selected":""}>Thu chuyển khoản cá nhân</option>
-              <option value="company_transfer"${x.paymentMethod==="company_transfer"?" selected":""}>Thu chuyển khoản công ty</option>
-            </select>
-            <button class="paid-btn ${x.paid?"paid":""}" onclick="toggleOrderPaid(${x.id})">
-              ${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}
-            </button>
-          `:`
-            <span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>
-            <span class="role-badge ${x.paid?"":"printing"}">${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}</span>
-          `}
+        <div class="order-card-actions">
+          <button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem chi tiết</button>
+          ${hasPermission("quote") && x.items?.length?`<button class="ghost-btn" onclick="editOrder(${x.id})">Điều chỉnh đơn</button>`:""}
+          ${x.items?.length?`<button class="ghost-btn" onclick="printSavedOrder(${x.id})">In báo giá</button>`:""}
+          ${x.items?.length?`<button class="ghost-btn" onclick="exportSavedOrder(${x.id})">Xuất Excel</button>`:""}
+          ${hasPermission("deleteOrder")?`<button class="ghost-btn btn-delete-order" onclick="deleteOrder(${x.id})">Xóa đơn</button>`:""}
         </div>
-      </div>
-
-      <div class="order-card-actions">
-        <button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem chi tiết</button>
-        ${hasPermission("quote") && x.items?.length?`<button class="ghost-btn" onclick="editOrder(${x.id})">Điều chỉnh đơn</button>`:""}
-        ${x.items?.length?`<button class="ghost-btn" onclick="printSavedOrder(${x.id})">In báo giá</button>`:""}
-        ${x.items?.length?`<button class="ghost-btn" onclick="exportSavedOrder(${x.id})">Xuất Excel</button>`:""}
-        ${hasPermission("deleteOrder")?`<button class="ghost-btn btn-delete-order" onclick="deleteOrder(${x.id})">Xóa đơn</button>`:""}
       </div>
     </div>`;
   }).join("");
@@ -7617,14 +7591,11 @@ function copyCustomerFollowup(id){
 
 function renderDashboard(){
   const list=getHistory();
-  const revenue=list.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
-  const received=list.filter(x=>x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
-  const unpaid=list.filter(x=>!x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
-  const production=list.filter(x=>(x.status||PRODUCTION_STATUSES[0])!=="Đã giao").length;
-  const delivered=list.filter(x=>(x.status||PRODUCTION_STATUSES[0])==="Đã giao").length;
-
   const selectedMonth=getWorkMonth();
   const monthOrders=list.filter(x=>monthKeyFromOrder(x)===selectedMonth);
+  const revenue=list.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
+  const unpaid=list.filter(x=>!x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
+
   const monthRevenue=monthOrders.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
   const monthCollected=monthOrders.filter(x=>x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
   const monthDebt=monthOrders.filter(x=>!x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
@@ -7658,6 +7629,7 @@ function renderDashboard(){
   $("finAllRevenue").textContent=money(revenue);
   $("finAllDebt").textContent=money(unpaid);
   $("finAllDebtMeta").textContent=`${debtCustomers} khách còn nợ`;
+
   $("finDelivered").textContent=fmt(monthDelivered);
   $("finProduction").textContent=fmt(monthProduction);
   $("finUrgent").textContent=fmt(monthUrgent);
@@ -7696,177 +7668,53 @@ function renderDashboard(){
       if(!!a.urgent!==!!b.urgent)return a.urgent?-1:1;
       const af=deliveryFollowupInfo(a),bf=deliveryFollowupInfo(b);
       if(af.rank!==bf.rank)return af.rank-bf.rank;
-      if(!!a.paid!==!!b.paid)return a.paid?1:-1;
-      const at=a.expectedDelivery?new Date(a.expectedDelivery).getTime():Infinity;
-      const bt=b.expectedDelivery?new Date(b.expectedDelivery).getTime():Infinity;
-      if(at!==bt)return at-bt;
       return Number(b.id||0)-Number(a.id||0);
-    });
+    })
+    .slice(0,40);
 
   $("dashboardActionOrders").innerHTML=actionRows.length?actionRows.map(x=>{
     const f=orderFinancials(x);
     const d=deliveryFollowupInfo(x);
-    const ci=x.customerInfo||{};
     const status=x.status||PRODUCTION_STATUSES[0];
-    const priority=x.urgent?`<span class="urgent-badge">⚡ GẤP</span>`:
-      (d.rank===1?`<span class="overview-status danger">QUÁ HẠN</span>`:
-      d.rank===2?`<span class="overview-status warn">SẮP GIAO</span>`:
-      !x.paid?`<span class="overview-status warn">CHƯA THU</span>`:`<span class="overview-status">THEO DÕI</span>`);
-    const rowCls=`${x.urgent?"order-urgent ":""}${d.rowCls}`;
-    return `<tr class="${rowCls}">
+    const priority=x.urgent?'<span class="urgent-badge">⚡ GẤP</span>':
+      (d.rank===1?'<span class="overview-status danger">QUÁ HẠN</span>':
+      d.rank===2?'<span class="overview-status warn">SẮP GIAO</span>':
+      !x.paid?'<span class="overview-status warn">CHƯA THU</span>':'<span class="overview-status">THEO DÕI</span>');
+    return `<tr class="${x.urgent?"order-urgent ":""}${d.rowCls}">
       <td>${priority}</td>
       <td><span class="action-order-code">${esc(x.orderCode||makeOrderCode(x.id))}</span></td>
-      <td class="customer-mini">
-        <strong>${esc(x.customer||"Quý Khách Hàng")}</strong>
-        ${ci.company?`<span>${esc(ci.company)}</span>`:""}
-        ${ci.phone?`<span>${esc(ci.phone)}</span>`:""}
-        ${x.designerName?`<span>Thiết kế: ${esc(x.designerName)}</span>`:""}
-      </td>
-      <td>
-        <span class="status-pill ${status==="Đã giao"?"delivered":""}">${esc(status)}</span>
-      </td>
-      <td>
-        <div class="delivery-text ${d.cls}">${esc(d.label)}</div>
-        ${x.expectedDelivery?`<div class="overview-note">${esc(formatDelivery(x.expectedDelivery))}</div>`:""}
-      </td>
-      <td class="money-cell">${money(f.subtotal)}</td>
-      <td class="money-cell">${money(f.designFee)}</td>
-      <td class="money-cell">${money(f.shipFee)}</td>
-      <td class="money-cell">${money(f.vat)}</td>
-      <td class="money-cell em">${money(f.grand)}</td>
-      <td class="money-cell">${money(f.deposit)}</td>
-      <td class="balance-cell">${money(f.remaining)}</td>
-      <td>
-        <div>${x.paid?`<span class="overview-status">Đã thu</span>`:`<span class="overview-status warn">Chưa thu</span>`}</div>
-        <div class="overview-note" style="margin-top:4px">${esc(paymentMethodLabel(x.paymentMethod))}</div>
-      </td>
-      <td>
-        <div class="action-buttons">
-          <button class="primary" onclick="showOrderDetail(${x.id})">Chi tiết</button>
-          ${hasPermission("quote")&&x.items?.length?`<button onclick="editOrder(${x.id})">Điều chỉnh</button>`:""}
-          <button onclick="copyCustomerFollowup(${x.id})">Sao chép nhắc khách</button>
-          ${x.items?.length?`<button onclick="printSavedOrder(${x.id})">In báo giá</button>`:""}
-          ${hasPermission("deleteOrder")?`<button class="btn-delete-order" onclick="deleteOrder(${x.id})">Xóa đơn</button>`:""}
-        </div>
-      </td>
+      <td><strong>${esc(x.customer||"Quý Khách Hàng")}</strong></td>
+      <td><span class="status-pill ${status==="Đã giao"?"delivered":""}">${esc(status)}</span></td>
+      <td><div class="delivery-text ${d.cls}">${esc(d.label)}</div>${x.expectedDelivery?`<div class="overview-note">${esc(formatDelivery(x.expectedDelivery))}</div>`:""}</td>
+      <td class="money">${money(f.grand)}</td>
+      <td class="money">${money(f.remaining)}</td>
+      <td>${x.paid?'<span class="overview-status good">ĐÃ THU</span>':'<span class="overview-status warn">CHƯA THU</span>'}</td>
+      <td><button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem</button></td>
     </tr>`;
-  }).join(""):`<tr><td colspan="14"><div class="dashboard-empty"><strong>Không có đơn cần theo dõi</strong>Tất cả đơn đã hoàn thành và thanh toán.</div></td></tr>`;
+  }).join(""):`<tr><td colspan="9"><div class="empty-state"><strong>Không có đơn cần theo dõi</strong>Các đơn cần xử lý sẽ xuất hiện tại đây.</div></td></tr>`;
 
   const months=getFinanceMonths(6);
-  const monthStats=months.map(mk=>{
+  let previousRevenue=null;
+  $("financeMonthBody").innerHTML=months.map(mk=>{
     const rows=list.filter(x=>monthKeyFromOrder(x)===mk);
-    const rev=rows.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
-    const col=rows.filter(x=>x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
-    return {mk,rows,rev,col,debt:rev-col,rate:rev?col/rev*100:0};
-  });
-  const maxRevenue=Math.max(1,...monthStats.map(x=>x.rev));
-  $("financeMonthBody").innerHTML=monthStats.map((x,i)=>{
-    const prev=i?monthStats[i-1].rev:0;
-    const growth=prev?((x.rev-prev)/prev*100):null;
-    return `<tr class="${x.mk===selectedMonth?"month-current":""}">
-      <td><b>${monthLabel(x.mk)}</b></td>
-      <td>${fmt(x.rows.length)}</td>
-      <td class="money"><b>${money(x.rev)}</b></td>
-      <td class="money">${money(x.col)}</td>
-      <td class="money">${money(x.debt)}</td>
-      <td>${x.rate.toFixed(1)}%</td>
-      <td>
-        <div class="revenue-bar-wrap"><div class="revenue-bar" style="width:${Math.round(x.rev/maxRevenue*100)}%"></div></div>
-        <div class="overview-note">${growth===null?"—":`${growth>=0?"+":""}${growth.toFixed(1)}% so tháng trước`}</div>
-      </td>
+    const rev=rows.reduce((s,x)=>s+orderFinancials(x).grand,0);
+    const col=rows.filter(x=>x.paid).reduce((s,x)=>s+orderFinancials(x).grand,0);
+    const debt=Math.max(0,rev-col);
+    const rate=rev?col/rev*100:0;
+    let trend="—";
+    if(previousRevenue!==null){
+      const diff=rev-previousRevenue;
+      trend=diff===0?"0%":(previousRevenue?((diff/previousRevenue*100).toFixed(1)+"%"):(rev>0?"+100%":"0%"));
+    }
+    previousRevenue=rev;
+    return `<tr class="${mk===selectedMonth?"month-current":""}">
+      <td>${monthLabel(mk)}</td><td>${fmt(rows.length)}</td><td class="money">${money(rev)}</td>
+      <td class="money">${money(col)}</td><td class="money">${money(debt)}</td>
+      <td>${rate.toFixed(1)}%</td><td>${trend}</td>
     </tr>`;
   }).join("");
 
-  const inv=getInventory();
-  const lowInv=inv.filter(x=>Number(x.stock||0)<=Number(x.min||0));
-  const inventoryRows=inv.slice(0,10).map(x=>{
-    const low=Number(x.stock||0)<=Number(x.min||0);
-    return `<tr>
-      <td class="overview-group">Tồn kho</td>
-      <td class="overview-stock-name">${esc(x.name||"")}</td>
-      <td>${esc(x.size||"—")}</td>
-      <td>${fmt(x.stock||0)} ${esc(x.unit||"")}</td>
-      <td>—</td>
-      <td>
-        <span class="overview-status ${low?"danger":""}">${low?"Sắp hết":"Ổn"}</span>
-        ${x.supplier?`<div class="overview-note" style="margin-top:4px">NCC: ${esc(x.supplier)}</div>`:""}
-      </td>
-    </tr>`;
-  }).join("");
-
-  $("overviewManagementBody").innerHTML=`
-    <tr class="overview-section-row"><td colspan="6">TÀI CHÍNH & CÔNG NỢ</td></tr>
-    <tr>
-      <td class="overview-group">Doanh thu</td>
-      <td>Tổng giá trị đơn đã lưu</td>
-      <td>—</td>
-      <td>${fmt(list.length)} đơn</td>
-      <td class="overview-value">${money(revenue)}</td>
-      <td><span class="overview-status">Lũy kế</span></td>
-    </tr>
-    <tr>
-      <td class="overview-group">Đã thu</td>
-      <td>Tiền đã thu lũy kế</td>
-      <td>—</td>
-      <td>${fmt(list.filter(x=>x.paid).length)} đơn</td>
-      <td class="overview-value">${money(received)}</td>
-      <td><span class="overview-status">${revenue?(received/revenue*100).toFixed(1):"0.0"}% đã thu</span></td>
-    </tr>
-    <tr>
-      <td class="overview-group">Công nợ</td>
-      <td>Chưa thu tiền lũy kế</td>
-      <td>—</td>
-      <td>${fmt(list.filter(x=>!x.paid).length)} đơn</td>
-      <td class="overview-value">${money(unpaid)}</td>
-      <td><span class="overview-status ${unpaid>0?"warn":""}">${unpaid>0?"Cần theo dõi":"Không có công nợ"}</span></td>
-    </tr>
-    <tr>
-      <td class="overview-group">Sản xuất</td>
-      <td>Đơn đang sản xuất</td>
-      <td>—</td>
-      <td>${fmt(production)} đơn</td>
-      <td>—</td>
-      <td><span class="overview-status ${production>0?"warn":""}">${production>0?"Đang thực hiện":"Không có đơn chờ"}</span></td>
-    </tr>
-    <tr>
-      <td class="overview-group">Đã giao</td>
-      <td>Đơn hoàn tất giao hàng</td>
-      <td>—</td>
-      <td>${fmt(delivered)} đơn</td>
-      <td>—</td>
-      <td><span class="overview-status">Hoàn tất</span></td>
-    </tr>
-
-    <tr class="overview-section-row"><td colspan="6">VẬT TƯ TỒN KHO ${inv.length?`• ${inv.length} vật tư • ${lowInv.length} sắp hết`:""}</td></tr>
-    ${inventoryRows || `<tr><td colspan="6"><div class="empty-state"><strong>Chưa có dữ liệu tồn kho</strong>Thêm vật tư tại mục “Tồn kho & Nhà cung cấp”.</div></td></tr>`}
-    ${inv.length>10?`<tr><td colspan="6" style="text-align:center"><button class="ghost-btn" onclick="navigate('inventory')">Xem toàn bộ ${inv.length} vật tư</button></td></tr>`:""}
-  `;
-
-  const max=Math.max(1,...PRODUCTION_STATUSES.map(st=>list.filter(x=>(x.status||PRODUCTION_STATUSES[0])===st).length));
-  $("dashboardStages").innerHTML=PRODUCTION_STATUSES.map(st=>{
-    const count=list.filter(x=>(x.status||PRODUCTION_STATUSES[0])===st).length;
-    const width=Math.round(count/max*100);
-    return `<div class="stage-row">
-      <span>${esc(st)}</span>
-      <div class="stage-track"><div class="stage-fill" style="width:${width}%"></div></div>
-      <div class="stage-count">${count}</div>
-    </div>`;
-  }).join("");
-
-  const recent=list.slice(0,6);
-  if(!recent.length){
-    $("dashboardRecent").innerHTML=`<div class="empty-state"><strong>Chưa có đơn nào</strong>Tạo báo giá đầu tiên để bắt đầu theo dõi.</div>`;
-  }else{
-    $("dashboardRecent").innerHTML=`<table class="recent-table">
-      <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Trạng thái</th><th>Giá trị</th></tr></thead>
-      <tbody>${recent.map(x=>`<tr>
-        <td><b>${esc(x.orderCode||makeOrderCode(x.id))}</b></td>
-        <td>${esc(x.customer||"")}${x.urgent?` <span class="urgent-badge">GẤP</span>`:""}</td>
-        <td><span class="status-pill ${(x.status==="Đã giao")?"delivered":(!x.paid?"unpaid":"")}">${esc(x.status||PRODUCTION_STATUSES[0])}</span></td>
-        <td style="white-space:nowrap">${money(x.total||x.totals?.grand||0)}</td>
-      </tr>`).join("")}</tbody>
-    </table>`;
-  }
+  renderWorkMonth();
 }
 
 function renderCustomers(){
@@ -8102,9 +7950,10 @@ function renderWorkMonth(){
   if($("workMonthPicker"))$("workMonthPicker").value=mk;
   const [yy,mm]=mk.split("-");
   $("workMonthLabel").textContent=`Tháng ${mm}/${yy}`;
-  $("monthStageCaption").textContent=`${mm}/${yy}`;
 
-  const list=getHistory().filter(x=>monthKeyFromOrder(x)===mk);
+  const list=getHistory()
+    .filter(x=>monthKeyFromOrder(x)===mk)
+    .sort((a,b)=>Number(b.id||0)-Number(a.id||0));
   const revenue=list.reduce((sum,x)=>sum+Number(x.total||x.totals?.grand||0),0);
   const delivered=list.filter(x=>x.status==="Đã giao").length;
   const unpaid=list.filter(x=>!x.paid).reduce((sum,x)=>sum+Number(x.total||x.totals?.grand||0),0);
@@ -8114,19 +7963,13 @@ function renderWorkMonth(){
   $("monthDelivered").textContent=fmt(delivered);
   $("monthUnpaid").textContent=money(unpaid);
 
-  const max=Math.max(1,...PRODUCTION_STATUSES.map(st=>list.filter(x=>(x.status||PRODUCTION_STATUSES[0])===st).length));
-  $("monthStages").innerHTML=PRODUCTION_STATUSES.map(st=>{
-    const count=list.filter(x=>(x.status||PRODUCTION_STATUSES[0])===st).length;
-    return `<div class="stage-row"><span>${esc(st)}</span><div class="stage-track"><div class="stage-fill" style="width:${Math.round(count/max*100)}%"></div></div><div class="stage-count">${count}</div></div>`;
-  }).join("");
-
   const show=list.slice(0,20);
   $("monthOrderList").innerHTML=show.length?show.map(x=>`<div class="month-order-row">
     <b>${esc(x.orderCode||makeOrderCode(x.id))}</b>
-    <span>${esc(x.customer||"")}${x.urgent?` <span class="urgent-badge">GẤP</span>`:""}</span>
+    <span>${esc(x.customer||"")}${x.urgent?' <span class="urgent-badge">GẤP</span>':""}</span>
     <span class="status-pill ${x.status==="Đã giao"?"delivered":""}">${esc(x.status||PRODUCTION_STATUSES[0])}</span>
     <span>${money(x.total||x.totals?.grand||0)}</span>
-    <span>${x.paid?"Đã thu":"Chưa thu"}</span>
+    <button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem</button>
   </div>`).join(""):`<div class="empty-state"><strong>Chưa có đơn trong tháng ${mm}/${yy}</strong>Đơn lưu trong tháng sẽ xuất hiện tại đây.</div>`;
 }
 
@@ -8897,7 +8740,75 @@ function deletePayrollRecord(id){
 }
 
 
+async function loadGoogleSheetsConfigUI(){
+  if(currentUser?.role!=="director")return;
+  try{
+    const res=await fetch("/api/admin/sheets/config",{credentials:"same-origin"});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||"Không tải được cấu hình.");
+    if($("sheetsWebAppUrl"))$("sheetsWebAppUrl").value=data.url||"";
+    if($("sheetsSyncSecret"))$("sheetsSyncSecret").value="";
+    if($("sheetsAutoSyncCheck"))$("sheetsAutoSyncCheck").checked=data.autoSync!==false;
+    if($("googleSheetsAutoBadge")){
+      $("googleSheetsAutoBadge").textContent=`Tự động đẩy khi thao tác: ${data.autoSync!==false?"BẬT":"TẮT"}`;
+    }
+  }catch(err){
+    console.warn("Không tải được cấu hình Google Sheet:",err);
+  }
+}
+
+async function saveGoogleSheetsConfigUI(){
+  if(currentUser?.role!=="director"){showToast("Chỉ Giám đốc được cấu hình Google Sheet.");return}
+  const url=$("sheetsWebAppUrl")?.value.trim()||"";
+  const secret=$("sheetsSyncSecret")?.value||"";
+  const autoSync=!!$("sheetsAutoSyncCheck")?.checked;
+  const box=$("googleSheetsSyncStatus");
+  if(box){box.className="sheets-sync-status";box.textContent="Đang lưu cấu hình..."}
+  try{
+    const res=await fetch("/api/admin/sheets/config",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      credentials:"same-origin",
+      body:JSON.stringify({url,secret,autoSync})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||"Không lưu được cấu hình.");
+    if($("sheetsSyncSecret"))$("sheetsSyncSecret").value="";
+    if($("googleSheetsAutoBadge")){
+      $("googleSheetsAutoBadge").textContent=`Tự động đẩy khi thao tác: ${data.autoSync!==false?"BẬT":"TẮT"}`;
+    }
+    showToast("Đã lưu cấu hình Google Sheet.");
+    await refreshGoogleSheetsStatus();
+  }catch(err){
+    if(box){box.className="sheets-sync-status error";box.textContent=`Lỗi: ${err.message}`}
+    else alert(`Không lưu được cấu hình Google Sheet: ${err.message}`);
+  }
+}
+
+async function syncTwoWayWithGoogleSheets(){
+  if(currentUser?.role!=="director"){showToast("Chỉ Giám đốc được đồng bộ Google Sheet.");return}
+  if(!confirm("ĐỒNG BỘ 2 CHIỀU VỚI GOOGLE SHEET?\n\nDữ liệu Sheet sẽ được nhập vào Firestore, sau đó dữ liệu đã chuẩn hóa sẽ được đẩy lại lên Sheet."))return;
+  showToast("Đang đồng bộ hai chiều với Google Sheet...");
+  try{
+    const res=await fetch("/api/admin/sheets/sync-two-way",{method:"POST",credentials:"same-origin"});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||"Đồng bộ hai chiều thất bại.");
+    await hydrateFromBackend();
+    renderDashboard();
+    renderHistory();
+    renderCustomers();
+    renderInventory();
+    renderPayroll();
+    renderPricebook();
+    showToast("Đã hoàn tất đồng bộ hai chiều với Google Sheet.");
+    refreshGoogleSheetsStatus();
+  }catch(err){
+    alert(`Không đồng bộ được Google Sheet: ${err.message}`);
+  }
+}
+
 async function refreshGoogleSheetsStatus(){
+  await loadGoogleSheetsConfigUI();
   const box=$("googleSheetsSyncStatus");
   if(!box)return;
   box.className="sheets-sync-status";
@@ -8953,20 +8864,20 @@ async function pullAllFromGoogleSheetsAdmin(){
 
 function navigate(page,pushHash=true){
   if(!currentUser)return;
+  if(page==="workmonth")page="dashboard";
   if(!hasPagePermission(page)){
     const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","workmonth","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
     page=allowed[0]||"orders";
   }
 
   const meta={
-    dashboard:["Tổng quan","Theo dõi báo giá, sản xuất và thanh toán tại một nơi"],
+    dashboard:["Tổng quan","Doanh thu, công nợ và tháng làm việc trên một màn hình"],
     quote:["Tạo báo giá","Tính giá tự động theo 17 bảng giá Hành Tinh Xanh"],
     orders:["Đơn sản xuất","Theo dõi tiến độ từ tiếp nhận file đến khi giao hàng"],
     customers:["Khách hàng","Tổng hợp lịch sử đơn hàng và công nợ theo khách hàng"],
     pricebook:["Bảng giá & hạng mục","Sửa chi tiết giá, chất liệu, đơn vị tính và thêm hạng mục mới"],
     inventory:["Tồn kho & Nhà cung cấp","Theo dõi vật tư và thông tin liên hệ nhà cung cấp"],
     payroll:["Lương & Chấm công","Ngày công, tăng ca, phụ cấp, KPI và BHXH theo tháng"],
-    workmonth:["Tháng làm việc","Tổng hợp hoạt động theo tháng"],
     accounts:["Tài khoản & phân quyền","Quản lý tài khoản đăng nhập và vai trò người dùng"]
   };
 
@@ -8981,7 +8892,6 @@ function navigate(page,pushHash=true){
   if(pushHash)history.replaceState(null,"",`#${page}`);
 
   if(page==="dashboard")renderDashboard();
-  if(page==="workmonth")renderWorkMonth();
   if(page==="orders")renderHistory();
   if(page==="customers")renderCustomers();
   if(page==="pricebook")renderPricebook();

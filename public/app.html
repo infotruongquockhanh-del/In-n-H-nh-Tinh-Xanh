@@ -13,7 +13,7 @@
 <meta property="og:description" content="Hệ thống quản lý in ấn, báo giá tự động, đơn hàng, khách hàng, kho và doanh thu Hành Tinh Xanh">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<title>Hành Tinh Xanh V28 - Tổng quan tối ưu</title>
+<title>Hành Tinh Xanh V28.1 - Trang chủ trực tiếp</title>
 <style>
 :root{
   --green:#07562f;
@@ -3210,88 +3210,13 @@ html.has-cached-session #erpShell{display:flex!important}
   .order-priority-column{width:38px;font-size:9px}
   .dashboard-action-table{min-width:820px}
 }
-</style>
-<script>
-  (function(){
-    try{
-      var u = localStorage.getItem("htx_cached_user");
-      var t = localStorage.getItem("htx_session_token");
-      if (u && (t || (JSON.parse(u) && JSON.parse(u).username))) {
-        document.documentElement.classList.add("has-cached-session");
-      }
-    }catch(e){}
-  })();
-</script>
-<style>
-  html.has-cached-session .auth-gate{display:none!important}
-  html.has-cached-session .erp-shell.auth-locked{display:flex!important}
+
+/* ===== V28.1: MỞ THẲNG TRANG CHỦ ===== */
+.auth-gate,.auth-box,#authGate{display:none!important}
+#erpShell{display:flex!important}
 </style>
 </head>
 <body>
-<script>window.__HTX_NO_LOGIN__=true;</script>
-
-<div class="auth-gate hidden" id="authGate" style="display:none!important">
-  <div class="auth-box">
-    <div class="auth-brand">
-      <div class="auth-brand-mark">HTX</div>
-      <div>
-        <strong>HÀNH TINH XANH</strong>
-        <span>Phần mềm Báo giá & Quản lý đơn in ấn</span>
-      </div>
-    </div>
-
-    <h1 class="auth-title" id="authTitle">Đăng nhập</h1>
-    <p class="auth-desc" id="authDesc">Nhập tài khoản và mật khẩu để sử dụng phần mềm.</p>
-
-    <div id="loginForm">
-      <div class="auth-fields">
-        <div>
-          <label class="label">Tên đăng nhập</label>
-          <input id="loginUsername" class="control" autocomplete="username" placeholder="Ví dụ: sale01">
-        </div>
-        <div>
-          <label class="label">Mật khẩu</label>
-          <input id="loginPassword" class="control" type="password" autocomplete="current-password" placeholder="Mật khẩu">
-        </div>
-      </div>
-      <div class="auth-actions">
-        <button id="loginBtn" class="btn btn-green">ĐĂNG NHẬP</button>
-        <button id="showCreateFirstBtn" class="btn btn-gray">TẠO TÀI KHOẢN</button>
-      </div>
-    </div>
-
-    <div id="firstAccountForm" style="display:none">
-      <div class="auth-fields">
-        <div>
-          <label class="label">Họ tên</label>
-          <input id="firstFullName" class="control" placeholder="Tên người quản trị">
-        </div>
-        <div>
-          <label class="label">Tên đăng nhập</label>
-          <input id="firstUsername" class="control" placeholder="Ví dụ: giamdoc">
-        </div>
-        <div>
-          <label class="label">Mật khẩu</label>
-          <input id="firstPassword" class="control" type="password" placeholder="Tối thiểu 4 ký tự">
-        </div>
-        <div>
-          <label class="label">Phân quyền</label>
-          <input class="control" value="Giám đốc - Toàn quyền" readonly>
-        </div>
-      </div>
-      <div class="auth-actions">
-        <button id="createFirstBtn" class="btn btn-green">TẠO TÀI KHOẢN GIÁM ĐỐC</button>
-        <button id="backLoginBtn" class="btn btn-gray">QUAY LẠI</button>
-      </div>
-    </div>
-
-    <div class="auth-msg" id="authMsg"></div>
-    <div class="auth-note">
-      <b>Tài khoản Giám đốc mặc định:</b> giamdoc &nbsp; | &nbsp; <b>Mật khẩu:</b> 123456<br>
-      <b>Build V27.1 Online Firestore</b><br>Đăng nhập qua backend Vercel, dữ liệu lưu trên Cloud Firestore và đồng bộ realtime giữa các nhân viên. Nếu không đăng nhập được, thông báo bên trên sẽ hiển thị lỗi kết nối database cụ thể.
-    </div>
-  </div>
-</div>
 
 <div class="erp-shell" id="erpShell">
   <aside class="sidebar" id="sidebar">
@@ -3299,15 +3224,15 @@ html.has-cached-session #erpShell{display:flex!important}
       <div class="brand-mark">HTX</div>
       <div class="brand-text">
         <strong>HÀNH TINH XANH</strong>
-        <span>Báo giá & Quản lý đơn in ấn · V28</span>
+        <span>Báo giá & Quản lý đơn in ấn · V28.1</span>
       </div>
     </div>
 
     <div class="nav-title">Điều hành</div>
     <nav class="nav-menu">
-      <button class="nav-btn" data-page="dashboard"><span class="nav-icon">▦</span><span>Tổng quan</span></button>
+      <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">▦</span><span>Tổng quan</span></button>
       <button class="nav-btn" data-page="quote"><span class="nav-icon">＋</span><span>Tạo báo giá</span></button>
-      <button class="nav-btn active" data-page="orders"><span class="nav-icon">▤</span><span>Đơn sản xuất</span></button>
+      <button class="nav-btn" data-page="orders"><span class="nav-icon">▤</span><span>Đơn sản xuất</span></button>
       <button class="nav-btn" data-page="customers"><span class="nav-icon">◎</span><span>Khách hàng</span></button>
       <button class="nav-btn" data-page="pricebook"><span class="nav-icon">₫</span><span>Bảng giá & hạng mục</span></button>
       <button class="nav-btn" data-page="inventory"><span class="nav-icon">▧</span><span>Tồn kho & Nhà cung cấp</span></button>
@@ -3322,8 +3247,8 @@ html.has-cached-session #erpShell{display:flex!important}
       <div class="topbar-left">
         <button class="mobile-menu" id="mobileMenu">☰</button>
         <div class="page-heading">
-          <h1 id="pageTitle">Đơn sản xuất</h1>
-          <p id="pageSubtitle">Theo dõi tiến độ từ tiếp nhận file đến khi giao hàng</p>
+          <h1 id="pageTitle">Tổng quan</h1>
+          <p id="pageSubtitle">Doanh thu, công nợ và tháng làm việc trên một màn hình</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -3338,13 +3263,12 @@ html.has-cached-session #erpShell{display:flex!important}
         </div>
         <span class="cloud-sync-badge offline" id="cloudSyncStatus" title="Trạng thái đồng bộ dữ liệu">Cloud: đang kết nối</span>
         <button class="quick-btn" id="topNewQuote">+ Tạo báo giá mới</button>
-        <button class="logout-btn" id="logoutBtn">Đăng xuất</button>
       </div>
     </header>
 
     <main class="page-host">
       <!-- DASHBOARD + THÁNG LÀM VIỆC -->
-      <section class="app-page" id="page-dashboard">
+      <section class="app-page active" id="page-dashboard">
         <div class="hero dashboard-compact-hero">
           <div>
             <h2>Tổng quan & Tháng làm việc</h2>
@@ -3808,7 +3732,7 @@ html.has-cached-session #erpShell{display:flex!important}
       </section>
 
       <!-- ĐƠN SẢN XUẤT -->
-      <section class="app-page active" id="page-orders">
+      <section class="app-page" id="page-orders">
         <div class="page-title-row">
           <div>
             <h2>Đơn sản xuất</h2>
@@ -5444,15 +5368,7 @@ function showAuthMessage(msg,type="error"){
 }
 
 function showLogin(){
-  if($("authGate")){
-    $("authGate").classList.add("hidden");
-    $("authGate").style.display="none";
-  }
-  if($("erpShell")){
-    $("erpShell").classList.remove("auth-locked");
-    $("erpShell").style.display="flex";
-  }
-  return;
+  if(currentUser)navigate(hasPagePermission("dashboard")?"dashboard":"orders",true);
 }
 
 function showFirstAccountForm(){
@@ -5632,14 +5548,8 @@ async function restoreSession(){
 }
 
 async function logout(){
-  try{await window.HTXRealtime?.stop?.()}catch{}
-  await backendLogout();
-  cloudSyncReady=false;
-  __nativeRemoveItem.call(localStorage,SESSION_KEY);
-  currentUser=null;
-  setCloudStatus("Cloud: chưa đăng nhập","offline");
-  showLogin();
-  if($("loginUsername"))$("loginUsername").value="giamdoc";
+  showToast("Ứng dụng hiện mở trực tiếp, không dùng màn hình đăng nhập.");
+  navigate(hasPagePermission("dashboard")?"dashboard":"orders",true);
 }
 
 function enterApp(){
@@ -5652,7 +5562,7 @@ function enterApp(){
   applyPermissions();
   refreshDesignerControls();
   const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
-  navigate(hasPagePermission("orders")?"orders":(allowed[0]||"orders"),true);
+  navigate(hasPagePermission("dashboard")?"dashboard":(allowed[0]||"orders"),true);
 }
 
 function applyPermissions(){
@@ -6397,11 +6307,6 @@ function init(){
   });
   window.addEventListener("resize",()=>{if(window.innerWidth>840)closeMobileSidebar()});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMobileSidebar()});
-  if($("logoutBtn")){
-    $("logoutBtn").style.display="none";
-    $("logoutBtn").addEventListener("click",logout);
-  }
-
   $("orderSearch").addEventListener("input",renderHistory);
   $("orderStatusFilter").addEventListener("change",renderHistory);
   $("orderPaidFilter").addEventListener("change",renderHistory);
@@ -6443,12 +6348,6 @@ function init(){
     el.addEventListener("change",updatePayrollPreview);
   });
 
-  $("loginBtn").addEventListener("click",login);
-  $("showCreateFirstBtn").addEventListener("click",showFirstAccountForm);
-  $("createFirstBtn").addEventListener("click",createFirstAccount);
-  $("backLoginBtn").addEventListener("click",showLogin);
-  $("loginPassword").addEventListener("keydown",e=>{if(e.key==="Enter")login()});
-
   $("priceAdjustPercent").addEventListener("input",updatePriceAdjustPreview);
   $("savePriceAdjustBtn").addEventListener("click",savePriceAdjustment);
   $("resetPriceAdjustBtn").addEventListener("click",resetPriceAdjustment);
@@ -6474,7 +6373,6 @@ function init(){
   updateItemEditUI();
   setupResponsiveObserver();
   setupScrollRecovery();
-  $("loginUsername").value="giamdoc";
   restoreSession();
 }
 

@@ -1,0 +1,33 @@
+name: Validate V26 source
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check backend and modules
+        run: npm run check
+      - name: Check inline app JavaScript
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path("public/app.html").read_text(encoding="utf-8")
+          start=s.find("<script>")
+          end=s.find("</script>",start)
+          if start < 0 or end < 0:
+              raise SystemExit("Không tìm thấy inline script")
+          Path("/tmp/app-inline.js").write_text(s[start+8:end],encoding="utf-8")
+          PY
+          node --check /tmp/app-inline.js

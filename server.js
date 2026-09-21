@@ -10,7 +10,8 @@ import {
   requireSession,
   requireDirector,
   sanitizeUser,
-  createRealtimeToken
+  createRealtimeToken,
+  restoreUserFromFirebaseIdToken
 } from "./src/auth.js";
 import {
   ensureBootstrap,
@@ -48,7 +49,7 @@ app.get("/api/health",(req,res)=>{
   res.json({
     ok:true,
     app:"Hành Tinh Xanh Full-stack",
-    version:25,
+    version:26,
     time:new Date().toISOString()
   });
 });
@@ -92,9 +93,38 @@ app.post("/api/auth/login",async(req,res,next)=>{
 
 app.get("/api/auth/me",requireSession,async(req,res,next)=>{
   try{
+    // Rolling session: mỗi lần F5/khôi phục phiên sẽ gia hạn cookie.
+    await setSessionCookie(res,req.user);
     const firebaseToken=await createRealtimeToken(req.user);
     res.json({user:sanitizeUser(req.user),firebaseToken});
   }catch(err){next(err)}
+});
+
+app.post("/api/auth/restore",async(req,res,next)=>{
+  try{
+    const header=String(req.headers.authorization||"");
+    const match=header.match(/^Bearer\s+(.+)$/i);
+    if(!match){
+      return res.status(401).json({error:"Thiếu Firebase ID token để khôi phục phiên."});
+    }
+
+    const user=await restoreUserFromFirebaseIdToken(match[1]);
+    if(user?.disabled){
+      return res.status(403).json({error:"Tài khoản này đang bị khóa."});
+    }
+    if(!user){
+      return res.status(401).json({error:"Không thể khôi phục phiên đăng nhập."});
+    }
+
+    await setSessionCookie(res,user);
+    const firebaseToken=await createRealtimeToken(user);
+    res.json({user:sanitizeUser(user),firebaseToken});
+  }catch(err){
+    if(String(err?.code||"").startsWith("auth/")){
+      return res.status(401).json({error:"Phiên Firebase không còn hợp lệ. Vui lòng đăng nhập lại."});
+    }
+    next(err);
+  }
 });
 
 app.post("/api/auth/logout",(req,res)=>{

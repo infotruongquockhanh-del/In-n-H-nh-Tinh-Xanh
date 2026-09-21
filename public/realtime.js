@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getAuth, signInWithCustomToken, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore,
   collection,
@@ -48,6 +48,7 @@ async function initFirebase(){
   if(!res.ok)throw new Error(data.error||"Không tải được Firebase config.");
   firebaseApp=initializeApp(data.config);
   auth=getAuth(firebaseApp);
+  await setPersistence(auth,browserLocalPersistence);
   db=getFirestore(firebaseApp);
 }
 
@@ -85,12 +86,49 @@ function subscribeCollections(){
   }
 }
 
+function waitForAuthUser(timeoutMs=5000){
+  return new Promise(resolve=>{
+    if(auth?.currentUser)return resolve(auth.currentUser);
+    let done=false;
+    let unsub=()=>{};
+    const finish=user=>{
+      if(done)return;
+      done=true;
+      try{unsub()}catch{}
+      clearTimeout(timer);
+      resolve(user||null);
+    };
+    unsub=onAuthStateChanged(auth,user=>finish(user),()=>finish(null));
+    const timer=setTimeout(()=>finish(auth?.currentUser||null),timeoutMs);
+  });
+}
+
 async function start(customToken,user){
   await initFirebase();
   currentRole=String(user?.role||"");
+  await setPersistence(auth,browserLocalPersistence);
   await signInWithCustomToken(auth,customToken);
   subscribeCollections();
   return true;
+}
+
+async function restoreBackendSession(){
+  await initFirebase();
+  const firebaseUser=await waitForAuthUser(5000);
+  if(!firebaseUser)return null;
+
+  const idToken=await firebaseUser.getIdToken(true);
+  const res=await fetch("/api/auth/restore",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":`Bearer ${idToken}`
+    },
+    credentials:"same-origin"
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(data.error||"Không thể khôi phục phiên đăng nhập.");
+  return data;
 }
 
 async function stop(){
@@ -100,5 +138,5 @@ async function stop(){
   }
 }
 
-window.HTXRealtime={start,stop,stopListeners};
+window.HTXRealtime={start,stop,stopListeners,restoreBackendSession};
 window.HTXRealtimeReady=Promise.resolve(window.HTXRealtime);

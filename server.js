@@ -15,7 +15,7 @@ import { publicDatabaseFailure } from './src/database-errors.js';
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express(),port=Number(process.env.PORT||3000);
 app.set('trust proxy',1);app.disable('x-powered-by');
-app.use((req,res,next)=>{req.requestId=String(req.get('x-request-id')||randomUUID());res.setHeader('X-Request-ID',req.requestId);res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');next();});
+app.use((req,res,next)=>{req.requestId=String(req.get('x-request-id')||randomUUID());res.setHeader('X-Request-ID',req.requestId);res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');if(/%2e/i.test(req.originalUrl||''))return res.status(404).send('Không tìm thấy trang.');next();});
 app.use(express.json({limit:'12mb'}));app.use(cookieParser());
 
 app.get('/api/health',async(req,res)=>{

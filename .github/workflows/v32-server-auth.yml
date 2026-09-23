@@ -22,6 +22,7 @@ jobs:
         env:
           NODE_ENV: test
           DATA_BACKEND: local
+          HTX_LOCAL_DB_PATH: /tmp/htx-v32-database.json
         run: |
           node server.js >/tmp/htx-v32.log 2>&1 &
           PID=$!

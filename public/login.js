@@ -19,6 +19,7 @@ function authMessage(err){
   if(c==='auth/invalid-credential'||c==='auth/invalid-login-credentials'||c==='auth/wrong-password'||c==='auth/user-not-found') return 'Tên đăng nhập hoặc mật khẩu không đúng.';
   if(c==='auth/too-many-requests') return 'Đăng nhập sai quá nhiều lần. Vui lòng chờ một lúc rồi thử lại.';
   if(c==='auth/network-request-failed') return 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.';
+  if(c==='permission-denied' || /Missing or insufficient permissions/i.test(String(err?.message||''))) return 'Firestore Security Rules chưa được Publish cho project in-hanh-tinh-xanh-ea08e. Vào Firestore Database → Rules và Publish rules V31.3.';
   if(c==='auth/email-already-in-use') return 'Tài khoản cũ đã được chuyển sang Firebase nhưng chỉ mục đăng nhập chưa hoàn tất. Hãy liên hệ Giám đốc.';
   return String(err?.message||'Không đăng nhập được.');
 }

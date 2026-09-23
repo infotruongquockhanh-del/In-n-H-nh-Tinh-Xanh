@@ -5305,7 +5305,7 @@ function showAuthMessage(msg,type="error"){
 
 function showLogin(){
   lockApplication();
-  clearPrivateCache();
+  clearPrivateCache({preserveBusiness:true});
   currentUser=null;
   try{window.HTXRealtime?.stopListeners?.()}catch{}
   location.replace('/');
@@ -5384,13 +5384,45 @@ window.addEventListener("offline",()=>{
 });
 
 let sessionCheckTimer = null;
-function clearPrivateCache() {
+function collectLegacyBrowserState(){
+  const state={};
+  for(const key of CLOUD_SYNC_KEYS){
+    const raw=localStorage.getItem(key);
+    if(raw===null)continue;
+    state[key]=cloudValueParse(raw);
+  }
+  return state;
+}
+function hasLegacyBrowserState(state){
+  return Object.values(state||{}).some(value=>{
+    if(Array.isArray(value))return value.length>0;
+    if(value&&typeof value==='object')return Object.keys(value).length>0;
+    return value!==null&&value!==''&&value!==undefined;
+  });
+}
+async function migrateLegacyBrowserState(state){
+  if(currentUser?.role!=='director'||!hasLegacyBrowserState(state))return;
+  try{
+    const res=await fetch('/api/admin/migrate-browser-state',{
+      method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({state})
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||'Không nhập được dữ liệu cũ.');
+    if(Number(data.summary?.created||0)>0)showToast(`Đã bảo toàn ${data.summary.created} bản ghi dữ liệu cũ.`);
+  }catch(err){
+    console.warn('Legacy browser migration:',err);
+    setCloudStatus('Dữ liệu cũ chưa được sao lưu lên máy chủ','offline');
+  }
+}
+function clearPrivateCache({preserveBusiness=false}={}) {
   cloudSyncReady = false;
   for (const timer of cloudSyncTimers.values()) clearTimeout(timer);
   for (const timer of realtimeDeltaTimers.values()) clearTimeout(timer);
   cloudSyncTimers.clear(); realtimeDeltaTimers.clear(); realtimeDeltaPending.clear();
+  const preserve=new Set(preserveBusiness?CLOUD_SYNC_KEYS:[]);
   for (const key of Object.keys(localStorage)) {
-    if (key.startsWith('htx_')) __nativeRemoveItem.call(localStorage, key);
+    if (key.startsWith('htx_')&&!preserve.has(key)) __nativeRemoveItem.call(localStorage, key);
   }
 }
 function lockApplication() {
@@ -5404,13 +5436,15 @@ function lockApplication() {
 async function login() { location.replace('/'); }
 async function restoreSession() {
   lockApplication();
-  clearPrivateCache();
+  const legacyBrowserState=collectLegacyBrowserState();
+  clearPrivateCache({preserveBusiness:true});
   currentUser = null;
   try {
     const data = await backendMe();
     if (!data?.user?.loginAllowed) { showLogin(); return; }
     if (data.user.mustChangePassword) { location.replace('/?change=1'); return; }
     currentUser = data.user;
+    await migrateLegacyBrowserState(legacyBrowserState);
     await hydrateFromBackend();
     __nativeSetItem.call(localStorage, SESSION_KEY, String(currentUser.id));
     enterApp();
@@ -9313,8 +9347,8 @@ async function saveAndExport(){
 <script src="/quote-math.js?v=29.0.0"></script>
 <script src="/quote-v29.js?v=29.0.0"></script>
 <!-- HTX BUSINESS V30 -->
-<script src="/business-v30.js?v=32.0.0"></script>
-<script src="/sync-v30.js?v=32.0.0"></script>
-<script src="/app-v30.js?v=32.0.0"></script>
+<script src="/business-v30.js?v=32.1.0"></script>
+<script src="/sync-v30.js?v=32.1.0"></script>
+<script src="/app-v30.js?v=32.1.0"></script>
 <script>init();</script>\n</body>
 </html>

@@ -23,7 +23,7 @@ app.use((req,res,next)=>{
   }
   next();
 });
-app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.3.0',mode:'firebase-native',authentication:'firebase-password'}));
+app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.3.1',mode:'firebase-native',authentication:'firebase-password'}));
 app.post('/api/legacy-auth/verify',(req,res)=>{
   const username=String(req.body?.username||'').trim().toLowerCase();
   const password=typeof req.body?.password==='string'?req.body.password:'';

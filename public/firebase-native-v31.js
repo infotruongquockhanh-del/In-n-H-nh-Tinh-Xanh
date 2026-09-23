@@ -1,9 +1,8 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+import { getAuth, setPersistence, browserLocalPersistence, inMemoryPersistence, onAuthStateChanged, signOut, createUserWithEmailAndPassword, deleteUser, updatePassword } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const realFetch = window.fetch.bind(window);
-const OWNER_EMAILS = new Set(['inhanhtinhxanh@gmail.com','info.truongquockhanh@gmail.com']);
 const EXPECTED_PROJECT_ID = 'in-hanh-tinh-xanh-ea08e';
 const COLLECTION_KEYS = {
   htx_users_v6: 'users',
@@ -29,9 +28,10 @@ function appError(message,status=400,code='NATIVE_FIREBASE_ERROR'){ return Objec
 function publicUser(data){
   if(!data) return null;
   return {
-    id:data.id, name:data.name || data.email || '', username:data.email || data.username || '',
-    email:data.email || data.username || '', role:data.role || '', active:data.active !== false,
-    loginAllowed:data.active !== false, mustChangePassword:false, nativeFirebase:true
+    id:data.id, name:data.name || data.username || '', username:data.username || '',
+    role:data.role || '', active:data.active !== false,
+    loginAllowed:data.active !== false && ['director','accounting','sales','designer','printing'].includes(data.role),
+    mustChangePassword:false, nativeFirebase:true
   };
 }
 function role(){ return profile?.role || ''; }
@@ -88,7 +88,7 @@ async function ensureFirebaseUser(){
   await setPersistence(auth,browserLocalPersistence);
   const existing=auth.currentUser || await waitForAuth(1200);
   if(existing) return existing;
-  location.replace('/?login=required');
+  location.replace('/');
   return await new Promise(()=>{});
 }
 async function allUserRows(){
@@ -100,34 +100,16 @@ async function allInviteRows(){
   return snap.docs.map(d=>({__docId:d.id,email:d.id,...d.data()}));
 }
 async function ensureProfile(user){
-  const ref=doc(db,'users',user.uid);
-  const snap=await getDoc(ref);
-  if(snap.exists()){
-    const data={...snap.data(),uid:user.uid,email:cleanEmail(user.email||snap.data().email)};
-    if(data.active===false) throw appError('Tài khoản đã bị khóa.',403,'ACCOUNT_DISABLED');
-    return data;
+  const snap=await getDoc(doc(db,'users',user.uid));
+  if(!snap.exists()){
+    await signOut(auth);
+    throw appError('Tài khoản chưa được Giám đốc tạo hoặc phân quyền.',403,'ACCOUNT_NOT_PROVISIONED');
   }
-  const email=cleanEmail(user.email);
-  if(!email) throw appError('Tài khoản Google không có email.',403,'EMAIL_REQUIRED');
-  if(OWNER_EMAILS.has(email)){
-    const legacy=(await allUserRows()).find(x=>x.role==='director' && x.active!==false);
-    const data={
-      id:legacy?.id ?? appIdFromEmail(email), uid:user.uid, email,
-      username:email, name:legacy?.name || user.displayName || 'Giám đốc',
-      role:'director', active:true, nativeFirebase:true, createdAt:now(), updatedAt:now()
-    };
-    await setDoc(ref,data,{merge:true});
-    return data;
+  const data={...snap.data(),uid:user.uid};
+  if(data.active===false || !['director','accounting','sales','designer','printing'].includes(data.role)){
+    await signOut(auth);
+    throw appError('Tài khoản đang bị khóa hoặc chưa được phân quyền.',403,'ACCOUNT_DISABLED');
   }
-  const inviteSnap=await getDoc(doc(db,'accessByEmail',email));
-  if(!inviteSnap.exists() || inviteSnap.data().active===false) throw appError('Email Google này chưa được Giám đốc cấp quyền.',403,'NOT_INVITED');
-  const invite=inviteSnap.data();
-  const data={
-    id:invite.id ?? appIdFromEmail(email), uid:user.uid, email, username:email,
-    name:invite.name || user.displayName || email, role:invite.role,
-    active:true, nativeFirebase:true, createdAt:invite.createdAt || now(), updatedAt:now()
-  };
-  await setDoc(ref,data,{merge:true});
   return data;
 }
 async function initNative(){
@@ -145,18 +127,9 @@ async function readCollection(name){
 }
 async function listAccounts(){
   requireRole(['director']);
-  const users=await allUserRows();
-  const invites=await allInviteRows();
-  const byId=new Map();
-  for(const inv of invites){
-    const row={id:inv.id ?? appIdFromEmail(inv.email),name:inv.name||inv.email,email:inv.email,username:inv.email,role:inv.role,active:inv.active!==false,loginAllowed:inv.active!==false,nativeFirebase:true,invited:true};
-    byId.set(String(row.id),row);
-  }
-  for(const u of users){
-    const row=publicUser(u);
-    byId.set(String(row.id),row);
-  }
-  return [...byId.values()];
+  return (await allUserRows())
+    .filter(u=>/^[a-z0-9][a-z0-9._-]{2,63}$/.test(String(u.username||'')))
+    .map(publicUser);
 }
 async function readState(){
   const state={};
@@ -176,7 +149,7 @@ async function saveSetting(key,value){
   const ref=doc(db,'settings',key);
   await runTransaction(db,async tx=>{
     const snap=await tx.get(ref), old=snap.exists()?snap.data():{};
-    tx.set(ref,{...old,value,version:Number(old.version||0)+1,updatedAt:now(),updatedBy:profile.email},{merge:false});
+    tx.set(ref,{...old,value,version:Number(old.version||0)+1,updatedAt:now(),updatedBy:(profile.username||profile.email)},{merge:false});
   });
   return {ok:true};
 }
@@ -209,7 +182,7 @@ async function findCustomerForOrder(item){
   return id;
 }
 async function audit(action,data={}){
-  try{ await addDoc(collection(db,'auditLogs'),{action,...data,userId:profile.id,username:profile.email,role:profile.role,at:now()}); }catch{}
+  try{ await addDoc(collection(db,'auditLogs'),{action,...data,userId:profile.id,username:(profile.username||profile.email),role:profile.role,at:now()}); }catch{}
 }
 async function upsertEntity(key,id,item,expectedVersion=0){
   const name=COLLECTION_KEYS[key];
@@ -230,7 +203,7 @@ async function upsertEntity(key,id,item,expectedVersion=0){
       const allowed=new Set(['status','designerId','designerName','designWork','version','updatedAt','updatedBy','id']);
       for(const k of Object.keys(incoming)) if(!(k in old) || JSON.stringify(incoming[k])!==JSON.stringify(old[k])) if(!allowed.has(k)) throw appError('Vai trò này chỉ được cập nhật tiến độ sản xuất.',403);
     }
-    const next={...(old||{}),...incoming,id:incoming.id ?? old?.id ?? id,version:current+1,updatedAt:now(),updatedBy:profile.email};
+    const next={...(old||{}),...incoming,id:incoming.id ?? old?.id ?? id,version:current+1,updatedAt:now(),updatedBy:(profile.username||profile.email)};
     tx.set(ref,next,{merge:false});
     return next;
   });
@@ -253,48 +226,124 @@ async function deleteEntityNative(key,id,expectedVersion=0){
   await audit('entity_delete',{key,entityId:String(id)});
   return {ok:true};
 }
-async function userAndInviteById(id){
-  const sid=String(id), users=await allUserRows(), invites=await allInviteRows();
-  const user=users.find(u=>String(u.id)===sid);
-  const invite=invites.find(u=>String(u.id)===sid || u.email===sid);
-  return {user,invite};
+function validUsername(value){
+  const username=String(value||'').trim().toLowerCase();
+  if(!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(username)) throw appError('Tên đăng nhập: 3–64 ký tự, chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang.');
+  return username;
+}
+function makeAuthEmail(username){
+  return 'u-'+crypto.randomUUID().replaceAll('-','')+'@auth.inhanhtinhxanh.invalid';
+}
+async function findUserById(id){
+  const sid=String(id);
+  return (await allUserRows()).find(u=>String(u.id)===sid)||null;
+}
+async function provisionIdentity(username,password){
+  if(typeof password!=='string'||password.length<8||password.length>128) throw appError('Mật khẩu phải có từ 8 đến 128 ký tự.');
+  const secondaryApp=initializeApp(config,'htx-provision-'+crypto.randomUUID());
+  const secondaryAuth=getAuth(secondaryApp);
+  await setPersistence(secondaryAuth,inMemoryPersistence);
+  const authEmail=makeAuthEmail(username);
+  try{
+    const cred=await createUserWithEmailAndPassword(secondaryAuth,authEmail,password);
+    return {secondaryApp,secondaryAuth,user:cred.user,authEmail};
+  }catch(err){
+    try{await deleteApp(secondaryApp);}catch{}
+    throw err;
+  }
+}
+async function cleanupProvision(prov,removeUser=false){
+  if(removeUser&&prov?.user){try{await deleteUser(prov.user);}catch{}}
+  try{await signOut(prov?.secondaryAuth);}catch{}
+  try{await deleteApp(prov?.secondaryApp);}catch{}
 }
 async function createAccountNative(body){
   requireRole(['director']);
-  const email=cleanEmail(body.username||body.email);
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw appError('Hãy nhập email Google hợp lệ.');
+  const username=validUsername(body.username);
+  const name=String(body.name||'').trim();
+  if(!name||name.length>120) throw appError('Họ tên phải có từ 1 đến 120 ký tự.');
   if(!['director','accounting','sales','designer','printing'].includes(body.role)) throw appError('Phân quyền không hợp lệ.');
-  const existing=(await allInviteRows()).find(x=>x.email===email);
-  if(existing) throw appError('Email đã được cấp quyền.',409);
-  const item={id:Date.now()*1000+Math.floor(Math.random()*1000),email,username:email,name:String(body.name||email).trim(),role:body.role,active:true,createdAt:now(),updatedAt:now(),provisionedByDirectorId:String(profile.id)};
-  await setDoc(doc(db,'accessByEmail',email),item);
-  await audit('account_invite',{entityId:String(item.id)});
-  return publicUser(item);
+  if((await getDoc(doc(db,'loginIndex',username))).exists()) throw appError('Tên đăng nhập đã tồn tại.',409);
+  const prov=await provisionIdentity(username,body.password);
+  const id=Date.now()*1000+Math.floor(Math.random()*1000), createdAt=now();
+  const item={id,uid:prov.user.uid,username,name,role:body.role,active:true,accessApproved:true,authEmail:prov.authEmail,authMode:'password',createdAt,updatedAt:createdAt,provisionedAt:createdAt,provisionedByDirectorId:String(profile.id)};
+  try{
+    const batch=writeBatch(db);
+    batch.set(doc(db,'users',prov.user.uid),item);
+    batch.set(doc(db,'loginIndex',username),{username,uid:prov.user.uid,userId:id,authEmail:prov.authEmail,active:true,createdAt,updatedAt:createdAt});
+    await batch.commit();
+    await audit('account_create',{entityId:String(id),username});
+    return publicUser(item);
+  }catch(err){
+    await cleanupProvision(prov,true);
+    throw err;
+  }finally{
+    await cleanupProvision(prov,false);
+  }
 }
 async function patchAccountNative(id,body){
   requireRole(['director']);
-  const found=await userAndInviteById(id);
-  if(!found.user&&!found.invite) throw appError('Không tìm thấy tài khoản.',404);
-  if(body.password!==undefined && Object.keys(body).length===1) throw appError('Firebase Google Sign-In không dùng mật khẩu nội bộ.',400,'GOOGLE_AUTH_ONLY');
-  const patch={updatedAt:now()};
+  const old=await findUserById(id);
+  if(!old) throw appError('Không tìm thấy tài khoản.',404);
+  const all=await allUserRows();
+  const next={...old,updatedAt:now()};
   if(body.role!==undefined){
     if(!['director','accounting','sales','designer','printing'].includes(body.role)) throw appError('Phân quyền không hợp lệ.');
-    patch.role=body.role;
+    next.role=body.role;
   }
-  if(body.active!==undefined) patch.active=!!body.active;
-  if(body.name!==undefined) patch.name=String(body.name).trim();
-  if(found.invite) await setDoc(doc(db,'accessByEmail',found.invite.email),patch,{merge:true});
-  if(found.user) await setDoc(doc(db,'users',found.user.__docId),patch,{merge:true});
-  const merged={...(found.invite||{}),...(found.user||{}),...patch};
-  return publicUser(merged);
+  if(body.active!==undefined) next.active=!!body.active;
+  if(body.name!==undefined){
+    next.name=String(body.name).trim();
+    if(!next.name) throw appError('Họ tên không hợp lệ.');
+  }
+  const otherDirectors=all.filter(u=>String(u.id)!==String(old.id)&&u.role==='director'&&u.active!==false);
+  if(old.role==='director' && old.active!==false && (next.role!=='director'||next.active===false) && otherDirectors.length===0)
+    throw appError('Phải giữ ít nhất một tài khoản Giám đốc đang hoạt động.',403);
+
+  if(body.password!==undefined){
+    if(String(old.id)===String(profile.id)){
+      if(typeof body.password!=='string'||body.password.length<8) throw appError('Mật khẩu phải có ít nhất 8 ký tự.');
+      await updatePassword(auth.currentUser,body.password);
+      await audit('account_password_change',{entityId:String(id),username:old.username});
+      return publicUser(next);
+    }
+    const prov=await provisionIdentity(old.username,body.password);
+    const replacement={...next,uid:prov.user.uid,authEmail:prov.authEmail,authMode:'password'};
+    try{
+      const batch=writeBatch(db);
+      batch.set(doc(db,'users',prov.user.uid),replacement);
+      batch.delete(doc(db,'users',old.__docId));
+      batch.set(doc(db,'loginIndex',old.username),{username:old.username,uid:prov.user.uid,userId:old.id,authEmail:prov.authEmail,active:replacement.active!==false,updatedAt:now()},{merge:true});
+      await batch.commit();
+      await audit('account_password_reset',{entityId:String(id),username:old.username});
+      return publicUser(replacement);
+    }catch(err){
+      await cleanupProvision(prov,true);
+      throw err;
+    }finally{
+      await cleanupProvision(prov,false);
+    }
+  }
+
+  await setDoc(doc(db,'users',old.__docId),next,{merge:false});
+  await setDoc(doc(db,'loginIndex',old.username),{active:next.active!==false,updatedAt:now()},{merge:true});
+  await audit('account_update',{entityId:String(id),username:old.username});
+  return publicUser(next);
 }
 async function deleteAccountNative(id){
   requireRole(['director']);
   if(String(id)===String(profile.id)) throw appError('Không thể xóa tài khoản đang sử dụng.',403);
-  const found=await userAndInviteById(id);
-  if(found.invite) await deleteDoc(doc(db,'accessByEmail',found.invite.email));
-  if(found.user) await deleteDoc(doc(db,'users',found.user.__docId));
-  await audit('account_delete',{entityId:String(id)});
+  const old=await findUserById(id);
+  if(!old) throw appError('Không tìm thấy tài khoản.',404);
+  if(old.role==='director'&&old.active!==false){
+    const others=(await allUserRows()).filter(u=>String(u.id)!==String(old.id)&&u.role==='director'&&u.active!==false);
+    if(!others.length) throw appError('Phải giữ ít nhất một tài khoản Giám đốc đang hoạt động.',403);
+  }
+  const batch=writeBatch(db);
+  batch.delete(doc(db,'users',old.__docId));
+  batch.delete(doc(db,'loginIndex',old.username));
+  await batch.commit();
+  await audit('account_delete',{entityId:String(id),username:old.username});
   return {ok:true};
 }
 function kpiCalc(count,rule='milestones'){
@@ -325,8 +374,8 @@ async function completeDesignNative(orderId,input){
   const employee=(await allUserRows()).find(u=>String(u.id)===String(order.designerId) && u.role==='designer' && u.active!==false);
   if(!employee) throw appError('Không tìm thấy nhân viên thiết kế được phân công.');
   const date=String(input.date||new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'}));
-  const completion={orderId:String(orderId),employeeId:order.designerId,employeeName:employee.name||employee.email,count,fee:count*40000,date,month:date.slice(0,7),confirmedBy:profile.email,confirmedAt:now()};
-  const next={...order,designProductCount:count,designWork:completion,version:Number(order.version||0)+1,updatedAt:now(),updatedBy:profile.email};
+  const completion={orderId:String(orderId),employeeId:order.designerId,employeeName:employee.name||employee.email,count,fee:count*40000,date,month:date.slice(0,7),confirmedBy:(profile.username||profile.email),confirmedAt:now()};
+  const next={...order,designProductCount:count,designWork:completion,version:Number(order.version||0)+1,updatedAt:now(),updatedBy:(profile.username||profile.email)};
   const batch=writeBatch(db); batch.set(orderRef,next); batch.set(ledgerRef,completion); await batch.commit();
   return {ok:true,item:next,completion};
 }
@@ -335,12 +384,12 @@ async function savePayrollNative(month,employeeId,body){
   const ref=doc(db,'settings','htx_payroll_v17'), snap=await getDoc(ref), old=snap.exists()?snap.data():{}, all=structuredClone(old.value||{});
   const rows=Array.isArray(all[month])?all[month]:[], idx=rows.findIndex(r=>String(r.employeeId)===String(employeeId)), prior=idx>=0?rows[idx]:null;
   if(Number(body.expectedVersion||0)!==Number(prior?.version||0)) throw appError('Bảng lương vừa thay đổi.',409);
-  let record={...(prior||{}),...(body.record||{}),employeeId:Number(employeeId)||employeeId,month,version:Number(prior?.version||0)+1,updatedAt:now(),updatedBy:profile.email};
+  let record={...(prior||{}),...(body.record||{}),employeeId:Number(employeeId)||employeeId,month,version:Number(prior?.version||0)+1,updatedAt:now(),updatedBy:(profile.username||profile.email)};
   if(record.role==='designer' && (body.refreshDesignKpi===true || !prior)){
     record.designKpi=await designSummaryNative(month,employeeId); record.kpiBonus=record.designKpi.amount; record.kpiPercent=record.designKpi.percent;
   }
   if(idx>=0) rows[idx]=record; else rows.push(record); all[month]=rows;
-  await setDoc(ref,{...old,value:all,version:Number(old.version||0)+1,updatedAt:now(),updatedBy:profile.email},{merge:false});
+  await setDoc(ref,{...old,value:all,version:Number(old.version||0)+1,updatedAt:now(),updatedBy:(profile.username||profile.email)},{merge:false});
   return record;
 }
 async function deletePayrollNative(month,employeeId,body){
@@ -349,7 +398,7 @@ async function deletePayrollNative(month,employeeId,body){
   const rows=Array.isArray(all[month])?all[month]:[], target=rows.find(r=>String(r.employeeId)===String(employeeId));
   if(target && Number(body.expectedVersion||0)!==Number(target.version||0)) throw appError('Phiếu lương vừa thay đổi.',409);
   all[month]=rows.filter(r=>String(r.employeeId)!==String(employeeId));
-  await setDoc(ref,{...old,value:all,version:Number(old.version||0)+1,updatedAt:now(),updatedBy:profile.email},{merge:false});
+  await setDoc(ref,{...old,value:all,version:Number(old.version||0)+1,updatedAt:now(),updatedBy:(profile.username||profile.email)},{merge:false});
   return {ok:true};
 }
 async function backupNative(){
@@ -381,8 +430,8 @@ async function mergeCustomersNative(body){
   const ids=(body.ids||[]).map(String), target=String(body.targetId);
   if(!ids.includes(target)) throw appError('Hồ sơ chính không hợp lệ.');
   const customers=await readCollection('customers'), orders=await readCollection('orders'), batch=writeBatch(db);
-  for(const c of customers) if(ids.includes(String(c.id)) && String(c.id)!==target) batch.set(doc(db,'customers',safeId(c.id)),{...c,mergedInto:Number(target)||target,mergedAt:now(),mergedBy:profile.email},{merge:false});
-  for(const o of orders) if(ids.includes(String(o.customerId)) && String(o.customerId)!==target) batch.set(doc(db,'orders',safeId(o.id)),{...o,customerId:Number(target)||target,version:Number(o.version||0)+1,updatedAt:now(),updatedBy:profile.email},{merge:false});
+  for(const c of customers) if(ids.includes(String(c.id)) && String(c.id)!==target) batch.set(doc(db,'customers',safeId(c.id)),{...c,mergedInto:Number(target)||target,mergedAt:now(),mergedBy:(profile.username||profile.email)},{merge:false});
+  for(const o of orders) if(ids.includes(String(o.customerId)) && String(o.customerId)!==target) batch.set(doc(db,'orders',safeId(o.id)),{...o,customerId:Number(target)||target,version:Number(o.version||0)+1,updatedAt:now(),updatedBy:(profile.username||profile.email)},{merge:false});
   await batch.commit(); return {ok:true,targetId:body.targetId};
 }
 function localDraftKey(){
@@ -419,12 +468,12 @@ async function handleApi(rawPath,options={}){
   const method=String(options.method||'GET').toUpperCase();
   const body=options.body?JSON.parse(options.body):{};
   try{
-    if(path==='/api/health') return jsonResponse(200,{ok:true,version:'31.0.0',mode:'firebase-native',databaseId:'(default)',authentication:'firebase-google'});
+    if(path==='/api/health') return jsonResponse(200,{ok:true,version:'31.3.0',mode:'firebase-native',databaseId:'(default)',authentication:'firebase-password'});
     if(path==='/api/firebase-config') return jsonResponse(200,{configured:true,config});
     if(path==='/api/database-status') return jsonResponse(200,{database:{connected:true,backend:'firebase-web-sdk',projectId:config.projectId,databaseId:'(default)'}});
     if(path==='/api/auth/me') return jsonResponse(200,{ok:true,user:publicUser(profile),firebaseNative:true});
     if(path==='/api/auth/login') return jsonResponse(200,{ok:true,user:publicUser(profile),firebaseNative:true});
-    if(path==='/api/auth/change-password') return jsonResponse(400,{error:'Ứng dụng dùng Google Sign-In; không lưu mật khẩu nội bộ.',code:'GOOGLE_AUTH_ONLY'});
+    if(path==='/api/auth/change-password'){ if(typeof body.newPassword!=='string'||body.newPassword.length<8) throw appError('Mật khẩu mới phải có ít nhất 8 ký tự.'); await updatePassword(auth.currentUser,body.newPassword); return jsonResponse(200,{ok:true}); }
     if(path==='/api/auth/logout'){ await signOut(auth); profile=null; return jsonResponse(200,{ok:true}); }
     if(path==='/api/auth/draft-key') return jsonResponse(200,{key:localDraftKey()});
     if(path==='/api/state' && method==='GET') return jsonResponse(200,{state:await readState(),settingDigests:{},firebaseNative:true});
@@ -461,7 +510,7 @@ async function handleApi(rawPath,options={}){
     }
     if(path==='/api/admin/design-kpi-policy' && method==='PUT'){
       requireRole(['director']); if(!['milestones','per-product'].includes(body.rule)) throw appError('Quy tắc KPI không hợp lệ.');
-      const value={rule:body.rule,updatedAt:now(),updatedBy:profile.email}; await setDoc(doc(db,'config','designKpiPolicy'),value,{merge:true}); return jsonResponse(200,value);
+      const value={rule:body.rule,updatedAt:now(),updatedBy:(profile.username||profile.email)}; await setDoc(doc(db,'config','designKpiPolicy'),value,{merge:true}); return jsonResponse(200,value);
     }
     if(path.startsWith('/api/admin/sheets/')) return jsonResponse(409,{error:'Google Sheets sync cũ đã tắt trong Firebase Native V31 để tránh ghi đè dữ liệu.'});
     return jsonResponse(404,{error:'API cũ không còn được sử dụng trong Firebase Native V31.'});

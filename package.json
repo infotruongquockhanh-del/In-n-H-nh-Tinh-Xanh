@@ -1,6 +1,6 @@
 {
   "name": "hanh-tinh-xanh-fullstack",
-  "version": "31.3.1",
+  "version": "32.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -21,8 +21,6 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
-    "firebase-admin": "^13.4.0",
-    "jose": "^6.0.13",
-    "firebase": "^12.19.0"
+    "firebase-admin": "^13.4.0"
   }
 }

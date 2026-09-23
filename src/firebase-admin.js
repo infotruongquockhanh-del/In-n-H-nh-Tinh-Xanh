@@ -2,14 +2,13 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import { cert, applicationDefault, getApp, getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
 import { storagePlan } from './storage-config.js';
 import { resolveFirebaseOptions, readServiceCredential, parseObject } from './firebase-options.js';
 import { databaseError, classifyDatabaseError, createDatabaseProbe } from './database-errors.js';
 
 export let firebaseProjectId = '';
 export let firestoreDatabaseId = '(default)';
-let plan = { backend: 'unavailable' }, credentialSource = 'unavailable', firestoreInstance = null, authInstance = null;
+let plan = { backend: 'unavailable' }, credentialSource = 'unavailable', firestoreInstance = null;
 let initializationError = null, store = null;
 try {
   try { plan = storagePlan(); } catch (cause) { throw databaseError('DB_UNSAFE_STORAGE', cause); }
@@ -26,7 +25,7 @@ try {
     if (app.options.projectId !== firebaseProjectId) throw databaseError('DB_TARGET_MISMATCH');
     firestoreInstance = firestoreDatabaseId === '(default)' ? getFirestore(app) : getFirestore(app, firestoreDatabaseId);
     firestoreInstance.settings({ ignoreUndefinedProperties: true });
-    authInstance = getAuth(app); store = firestoreInstance;
+    store = firestoreInstance;
   } else {
     store = (await import('./local-store.js')).localDb;
     credentialSource = 'local_store';
@@ -38,7 +37,6 @@ try {
 }
 const unavailable = () => { throw initializationError || databaseError('DB_UNAVAILABLE'); };
 export const db = store || { collection: unavailable, runTransaction: unavailable, batch: unavailable, settings: unavailable };
-export const adminAuth = authInstance || { async createCustomToken() { return null; }, async verifyIdToken() { throw databaseError('DB_CREDENTIALS_UNAVAILABLE'); } };
 export function getFirebaseDiagnostics() {
   return { initialized: !initializationError, isCloudFirestore: !!firestoreInstance, backend: plan.backend,
     projectId: firebaseProjectId || null, databaseId: firestoreDatabaseId, credentialSource,

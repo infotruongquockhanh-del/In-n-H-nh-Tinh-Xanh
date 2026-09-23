@@ -6124,7 +6124,7 @@ function init(){
     if(!hasPermission("quote")){showToast("Bạn không có quyền tạo báo giá.");return}
     const q=saveQuote();
     if(!q)return;
-    showToast("Đang lưu đơn lên Firestore...");
+    showToast("Đang lưu đơn lên cơ sở dữ liệu...");
     const ok=await waitForOrderPersistence();
     if(!ok){alert("Chưa lưu được đơn lên cơ sở dữ liệu. Vui lòng kiểm tra kết nối Firebase/Vercel rồi thử lại.");return}
     try{await hydrateFromBackend()}catch{}
@@ -8571,7 +8571,7 @@ async function refreshGoogleSheetsStatus(){
 }
 async function pushAllToGoogleSheets(){
   if(currentUser?.role!=="director")return;
-  if(!confirm("Đẩy toàn bộ dữ liệu hiện tại từ Firestore lên Google Sheet?"))return;
+  if(!confirm("Đẩy toàn bộ dữ liệu hiện tại từ cơ sở dữ liệu lên Google Sheet?"))return;
   showToast("Đang đồng bộ toàn bộ dữ liệu lên Google Sheet...");
   try{
     const res=await fetch("/api/admin/sheets/push-all",{method:"POST",credentials:"same-origin"});
@@ -8585,7 +8585,7 @@ async function pushAllToGoogleSheets(){
 }
 async function pullAllFromGoogleSheetsAdmin(){
   if(currentUser?.role!=="director")return;
-  if(!confirm("LẤY DỮ LIỆU TỪ GOOGLE SHEET?\n\nDữ liệu trong Sheet sẽ được ghi ngược về Firestore. Hãy chắc chắn Sheet đang đúng trước khi tiếp tục."))return;
+  if(!confirm("LẤY DỮ LIỆU TỪ GOOGLE SHEET?\n\nDữ liệu trong Sheet sẽ được ghi ngược về cơ sở dữ liệu. Hãy chắc chắn Sheet đang đúng trước khi tiếp tục."))return;
   showToast("Đang lấy dữ liệu từ Google Sheet...");
   try{
     const res=await fetch("/api/admin/sheets/pull-all",{method:"POST",credentials:"same-origin"});
@@ -8598,7 +8598,7 @@ async function pullAllFromGoogleSheetsAdmin(){
     renderInventory();
     renderPayroll();
     renderPricebook();
-    showToast("Đã lấy dữ liệu từ Google Sheet về Firestore.");
+    showToast("Đã lấy dữ liệu từ Google Sheet về cơ sở dữ liệu.");
   }catch(err){
     alert(`Không lấy được dữ liệu từ Google Sheet: ${err.message}`);
   }
@@ -9300,7 +9300,7 @@ function downloadXlsxObject(q){
 async function saveAndExport(){
   const q=saveQuote();
   if(!q)return;
-  showToast("Đang lưu đơn lên Firestore...");
+  showToast("Đang lưu đơn lên cơ sở dữ liệu...");
   const ok=await waitForOrderPersistence();
   if(!ok){alert("Chưa lưu được đơn lên cơ sở dữ liệu nên chưa xuất Excel.");return}
   try{await hydrateFromBackend()}catch{}
@@ -9313,18 +9313,8 @@ async function saveAndExport(){
 <script src="/quote-math.js?v=29.0.0"></script>
 <script src="/quote-v29.js?v=29.0.0"></script>
 <!-- HTX BUSINESS V30 -->
-<script src="/business-v30.js?v=31.3.0"></script>
-<script src="/sync-v30.js?v=31.3.0"></script>
-<script src="/app-v30.js?v=31.3.0"></script>
-<script type="module">
-  import '/firebase-native-v31.js?v=31.3.0';
-  try {
-    await window.HTXFirebaseNativeReady;
-    init();
-  } catch (err) {
-    console.error(err);
-    if(window.HTXFirebaseNativeShowFatal) window.HTXFirebaseNativeShowFatal(err); else document.body.innerHTML='<div style="font-family:Arial;padding:40px;max-width:720px;margin:auto"><h2>Không kết nối được Firebase</h2><p>'+String(err.message||err)+'</p></div>';
-  }
-</script>
-</body>
+<script src="/business-v30.js?v=32.0.0"></script>
+<script src="/sync-v30.js?v=32.0.0"></script>
+<script src="/app-v30.js?v=32.0.0"></script>
+<script>init();</script>\n</body>
 </html>

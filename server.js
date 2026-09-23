@@ -1,55 +1,62 @@
 import 'dotenv/config';
 import express from 'express';
-import fs from 'node:fs';
-import { verifyPassword, approved, publicUser } from './src/access-policy.js';
+import cookieParser from 'cookie-parser';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import accessRoutes from './src/access-routes.js';
+import routesV30 from './src/routes-v30.js';
+import { ensureBackendReady } from './src/backend-ready.js';
+import { verifyFirebaseConnection, getFirebaseDiagnostics } from './src/firebase-admin.js';
+import { readAllState, writeStateKey, upsertEntity, deleteEntity, getDatabaseSummary } from './src/state-store.js';
+import { settingDigests } from './src/data-safety.js';
+import { publicDatabaseFailure } from './src/database-errors.js';
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
-const app=express();
-const port=Number(process.env.PORT||3000);
-const legacyDb=JSON.parse(fs.readFileSync(path.join(__dirname,'data','local-database.json'),'utf8'));
-const legacyUsers=Array.isArray(legacyDb.htx_users_v6)?legacyDb.htx_users_v6:[];
-const legacyAttempts=new Map();
-app.set('trust proxy',1);
-app.disable('x-powered-by');
-app.use(express.json({limit:'32kb'}));
-app.use((req,res,next)=>{
-  res.setHeader('X-Content-Type-Options','nosniff');
-  res.setHeader('Referrer-Policy','same-origin');
-  res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');
-  if(req.path==='/'||req.path==='/index.html'||req.path==='/app.html'||req.path==='/firebase-native-v31.js'){
-    res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');
+const app=express(),port=Number(process.env.PORT||3000);
+app.set('trust proxy',1);app.disable('x-powered-by');
+app.use((req,res,next)=>{req.requestId=String(req.get('x-request-id')||randomUUID());res.setHeader('X-Request-ID',req.requestId);res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');next();});
+app.use(express.json({limit:'12mb'}));app.use(cookieParser());
+
+app.get('/api/health',async(req,res)=>{
+  try{
+    await ensureBackendReady();
+    const db=await verifyFirebaseConnection();
+    res.status(db.connected?200:503).json({ok:!!db.connected,version:'32.0.0',authentication:'internal-password',storage:'server-firestore',database:db.connected?'connected':'unavailable',code:db.code});
+  }catch(err){
+    const failure=publicDatabaseFailure(err)||{code:'DB_UNAVAILABLE',error:'Cơ sở dữ liệu chưa sẵn sàng.'};
+    res.status(503).json({ok:false,version:'32.0.0',authentication:'internal-password',storage:'server-firestore',...failure,requestId:req.requestId});
   }
-  next();
 });
-app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.3.1',mode:'firebase-native',authentication:'firebase-password'}));
-app.post('/api/legacy-auth/verify',(req,res)=>{
-  const username=String(req.body?.username||'').trim().toLowerCase();
-  const password=typeof req.body?.password==='string'?req.body.password:'';
-  const ip=String(req.headers['x-forwarded-for']||req.socket?.remoteAddress||'').split(',')[0].trim();
-  const key=ip+'|'+username, now=Date.now(), state=legacyAttempts.get(key)||{count:0,until:0};
-  if(state.until>now) return res.status(429).json({ok:false,error:'Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau.'});
-  const user=legacyUsers.find(x=>String(x.username||'').toLowerCase()===username);
-  if(!user||!approved(user)||!verifyPassword(username,password,user.passwordHash)){
-    const count=state.count+1;
-    legacyAttempts.set(key,count>=5?{count:0,until:now+10*60*1000}:{count,until:0});
-    return res.status(401).json({ok:false,error:'Tên đăng nhập hoặc mật khẩu không đúng.'});
-  }
-  legacyAttempts.delete(key);
-  return res.json({ok:true,user:publicUser(user)});
+
+app.use(accessRoutes);
+
+app.get('/api/state',async(req,res,next)=>{
+  try{const state=await readAllState(req.user);res.json({state,settingDigests:await settingDigests(req.user,state)});}catch(err){next(err);}
 });
-app.get('/firebase-applet-config.json',(req,res)=>res.sendFile(path.join(__dirname,'firebase-applet-config.json')));
-app.get(['/', '/index.html', '/login', '/login.html'],(req,res)=>{
-  res.setHeader('Cache-Control','no-store');
-  res.sendFile(path.join(__dirname,'public','login.html'));
+app.put('/api/state/:key',async(req,res,next)=>{
+  try{res.json({ok:true,...await writeStateKey(req.params.key,req.body?.value,req.user,req.body?.expectedDigest)});}catch(err){next(err);}
 });
-app.get(['/app', '/app.html'],(req,res)=>{
-  res.setHeader('Cache-Control','no-store');
-  res.sendFile(path.join(__dirname,'public','app.html'));
+app.put('/api/entity/:key/:id',async(req,res,next)=>{
+  try{res.json({ok:true,item:await upsertEntity(req.params.key,req.params.id,req.body?.item,Number(req.body?.expectedVersion||0),req.user,req.body?.mutationId||'')});}catch(err){next(err);}
 });
-app.use(express.static(path.join(__dirname,'public'),{maxAge:0,etag:true,lastModified:true}));
-app.use('/api',(req,res)=>res.status(410).json({error:'API máy chủ cũ đã tắt. Ứng dụng V31 dùng Firebase Web SDK trực tiếp.',code:'FIREBASE_NATIVE_CLIENT'}));
-app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Lỗi máy chủ tĩnh.',code:'STATIC_SERVER_ERROR'});});
-if(!process.env.VERCEL) app.listen(port,'0.0.0.0',()=>console.log('Hành Tinh Xanh V31 Firebase Native: http://0.0.0.0:'+port));
+app.delete('/api/entity/:key/:id',async(req,res,next)=>{
+  try{res.json({ok:true,...await deleteEntity(req.params.key,req.params.id,Number(req.body?.expectedVersion||0),req.user)});}catch(err){next(err);}
+});
+app.get('/api/database-status',async(req,res,next)=>{
+  try{res.json({database:{...getFirebaseDiagnostics(),...await verifyFirebaseConnection()}});}catch(err){next(err);}
+});
+app.get('/api/admin/database-summary',async(req,res,next)=>{try{res.json({summary:await getDatabaseSummary()});}catch(err){next(err);}});
+app.use(routesV30);
+
+app.use(express.static(path.join(__dirname,'public'),{maxAge:0,etag:true,lastModified:true,index:false}));
+app.use((req,res)=>{if(req.path.startsWith('/api/'))return res.status(404).json({error:'API không tồn tại.'});res.status(404).send('Không tìm thấy trang.');});
+app.use((err,req,res,next)=>{
+  const failure=publicDatabaseFailure(err);
+  if(failure)return res.status(err.status||503).json({...failure,requestId:req.requestId});
+  const status=Number(err.status||500);
+  if(status>=500)console.error(JSON.stringify({event:'HTX_SERVER_ERROR',requestId:req.requestId,status,code:err.code||'SERVER_ERROR'}));
+  res.status(status).json({error:status>=500?'Máy chủ gặp lỗi khi xử lý yêu cầu.':String(err.message||'Yêu cầu không hợp lệ.'),...(err.code?{code:err.code}:{}),requestId:req.requestId});
+});
+if(!process.env.VERCEL)app.listen(port,'0.0.0.0',()=>console.log('Hành Tinh Xanh V32: http://0.0.0.0:'+port));
 export default app;

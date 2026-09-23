@@ -1,0 +1,21 @@
+name: Diagnose Firebase ea08e
+on:
+  push:
+    branches: [diag/firebase-ea08e]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Firebase hosting config
+        shell: bash
+        run: |
+          set +e
+          for u in             "https://in-hanh-tinh-xanh-ea08e.firebaseapp.com/__/firebase/init.json"             "https://in-hanh-tinh-xanh-ea08e.web.app/__/firebase/init.json"; do
+            echo "=== $u ==="
+            code=$(curl -L -sS --max-time 20 -o /tmp/out -w "%{http_code}" "$u")
+            echo "HTTP=$code"
+            head -c 4000 /tmp/out
+            echo
+          done

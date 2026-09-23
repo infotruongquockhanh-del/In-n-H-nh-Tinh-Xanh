@@ -1,0 +1,52 @@
+name: HTX V31.2 login and role checks
+on:
+  push:
+    branches: [fix/login-role-v312]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node --check server.js
+      - run: node --check public/login.js
+      - run: node --check public/firebase-native-v31.js
+      - name: Verify login and role wiring
+        run: |
+          test "$(node -p "require('./package.json').version")" = "31.2.0"
+          grep -q "ĐĂNG NHẬP BẰNG GOOGLE" public/login.html
+          grep -q "signInWithPopup" public/login.js
+          grep -q "accessByEmail" public/login.js
+          grep -q "director:'Giám đốc'" public/login.js
+          grep -q 'director:\["dashboard","quote","orders","customers","pricebook","inventory","payroll","accounts"' public/app.html
+          grep -q "applyPermissions();" public/app.html
+          grep -q "logoutBtn" public/app.html
+          ! grep -q "logoutBtn{display:none" public/firebase-native-v31.js
+          ! grep -q "signInWithRedirect" public/firebase-native-v31.js
+      - name: Verify routes
+        run: |
+          node server.js >/tmp/htx.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:3000/api/health >/tmp/health && break; sleep 1; done
+          grep -q '"version":"31.2.0"' /tmp/health
+          curl -fsS http://127.0.0.1:3000/ >/tmp/login
+          curl -fsS http://127.0.0.1:3000/app >/tmp/app
+          grep -q "ĐĂNG NHẬP BẰNG GOOGLE" /tmp/login
+          grep -q "firebase-native-v31.js?v=31.2.0" /tmp/app
+      - name: Check authorized domain
+        continue-on-error: true
+        run: |
+          curl -sS "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA" >/tmp/auth.json
+          if grep -q '"in-hanh-tinh-xanh.ai.studio"' /tmp/auth.json; then
+            echo "Authorized domain OK"
+          else
+            echo "::warning::Firebase Authorized domains is still missing in-hanh-tinh-xanh.ai.studio"
+            exit 1
+          fi

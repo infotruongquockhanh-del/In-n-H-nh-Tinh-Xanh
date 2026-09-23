@@ -88,28 +88,8 @@ async function ensureFirebaseUser(){
   await setPersistence(auth,browserLocalPersistence);
   const existing=auth.currentUser || await waitForAuth(1200);
   if(existing) return existing;
-  showGoogleLogin();
-  return await new Promise(resolve=>{
-    const bind=()=>{
-      const btn=document.getElementById('firebaseGoogleLoginBtn');
-      if(!btn){ setTimeout(bind,50); return; }
-      btn.onclick=async()=>{
-        const msg=document.getElementById('firebaseLoginMessage');
-        btn.disabled=true; btn.textContent='Đang mở Google...'; if(msg)msg.textContent='';
-        try{
-          const provider=new GoogleAuthProvider();
-          provider.setCustomParameters({prompt:'select_account'});
-          const result=await signInWithPopup(auth,provider);
-          resolve(result.user);
-        }catch(err){
-          console.warn('[HTX Firebase Google Sign-in]',err.code||err.message);
-          if(msg)msg.textContent=authErrorText(err);
-          btn.disabled=false; btn.textContent='Đăng nhập bằng Google';
-        }
-      };
-    };
-    bind();
-  });
+  location.replace('/?login=required');
+  return await new Promise(()=>{});
 }
 async function allUserRows(){
   const snap=await getDocs(collection(db,'users'));
@@ -445,7 +425,7 @@ async function handleApi(rawPath,options={}){
     if(path==='/api/auth/me') return jsonResponse(200,{ok:true,user:publicUser(profile),firebaseNative:true});
     if(path==='/api/auth/login') return jsonResponse(200,{ok:true,user:publicUser(profile),firebaseNative:true});
     if(path==='/api/auth/change-password') return jsonResponse(400,{error:'Ứng dụng dùng Google Sign-In; không lưu mật khẩu nội bộ.',code:'GOOGLE_AUTH_ONLY'});
-    if(path==='/api/auth/logout'){ await signOut(auth); await signInWithRedirect(auth,new GoogleAuthProvider()); return jsonResponse(200,{ok:true}); }
+    if(path==='/api/auth/logout'){ await signOut(auth); profile=null; return jsonResponse(200,{ok:true}); }
     if(path==='/api/auth/draft-key') return jsonResponse(200,{key:localDraftKey()});
     if(path==='/api/state' && method==='GET') return jsonResponse(200,{state:await readState(),settingDigests:{},firebaseNative:true});
     if(path.startsWith('/api/state/') && method==='PUT'){
@@ -495,7 +475,6 @@ function installUiTweaks(){
   if(password){ password.value='firebase-google-auth'; const field=password.closest('.field')||password.parentElement; if(field) field.style.display='none'; }
   const userInput=document.getElementById('newAccountUsername');
   if(userInput){ userInput.placeholder='nhanvien@gmail.com'; const label=userInput.closest('.field')?.querySelector('label'); if(label) label.textContent='Email Google'; }
-  const style=document.createElement('style'); style.textContent='#logoutBtn{display:none!important}'; document.head.appendChild(style);
   const hidePasswordButtons=()=>document.querySelectorAll('[data-user-action="password"]').forEach(b=>b.style.display='none');
   hidePasswordButtons(); new MutationObserver(hidePasswordButtons).observe(document.body,{childList:true,subtree:true});
 }
@@ -513,4 +492,4 @@ const ready=(async()=>{
 })();
 window.HTXFirebaseNativeShowFatal=(err)=>showGoogleLogin(authErrorText(err));
 window.HTXFirebaseNativeReady=ready;
-window.HTXFirebaseNative={ready,reauthenticate:async()=>{await signOut(auth);showGoogleLogin('Hãy đăng nhập lại bằng Google.');},getProfile:()=>publicUser(profile)};
+window.HTXFirebaseNative={ready,reauthenticate:async()=>{await signOut(auth);profile=null;location.replace('/');},getProfile:()=>publicUser(profile)};

@@ -17,9 +17,13 @@ app.use((req,res,next)=>{
   }
   next();
 });
-app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.1.1',mode:'firebase-native',authentication:'firebase-google'}));
+app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.2.0',mode:'firebase-native',authentication:'firebase-google'}));
 app.get('/firebase-applet-config.json',(req,res)=>res.sendFile(path.join(__dirname,'firebase-applet-config.json')));
-app.get(['/', '/index.html', '/login', '/login.html', '/app', '/app.html'],(req,res)=>{
+app.get(['/', '/index.html', '/login', '/login.html'],(req,res)=>{
+  res.setHeader('Cache-Control','no-store');
+  res.sendFile(path.join(__dirname,'public','login.html'));
+});
+app.get(['/app', '/app.html'],(req,res)=>{
   res.setHeader('Cache-Control','no-store');
   res.sendFile(path.join(__dirname,'public','app.html'));
 });

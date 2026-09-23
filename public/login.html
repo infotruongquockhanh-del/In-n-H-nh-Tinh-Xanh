@@ -1,32 +1,53 @@
 <!doctype html>
 <html lang="vi">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#07562f"><title>Đăng nhập — Hành Tinh Xanh</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07562f">
+<title>Đăng nhập — Hành Tinh Xanh</title>
 <style>
-*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px;background:linear-gradient(130deg,#034c31,#176e4b);font-family:"UTM Avo",Arial,sans-serif;color:#131c25}main{width:min(540px,100%);padding:32px;background:white;border-radius:24px;box-shadow:0 18px 60px #00362133}.brand{display:flex;gap:15px;align-items:center;margin-bottom:30px}.mark{width:65px;height:65px;border-radius:18px;background:#07562f;color:white;display:grid;place-items:center;font-size:22px;font-weight:700}.brand strong{display:block;font-size:21px}.brand small{display:block;margin-top:7px;color:#718094;font-size:13px}h1{font-size:27px;margin:0 0 10px}p{font-size:14px;line-height:1.6;color:#718094}label{display:block;font-size:16px;margin:20px 0 8px}input{width:100%;padding:16px;border:1px solid #9eafc5;border-radius:12px;font:inherit;font-size:18px}input:focus{outline:3px solid #d8f0e1;border-color:#07562f}button{margin-top:20px;width:100%;padding:17px;border:0;border-radius:13px;background:#07562f;color:white;font:inherit;font-size:18px;cursor:pointer}button:disabled{opacity:.65;cursor:wait}.msg{min-height:22px;font-size:14px;line-height:1.6;margin-top:18px;color:#b42c2c}.note{border-top:1px solid #e5e9ec;padding-top:18px;margin-top:18px;font-size:13px;line-height:1.6;color:#718094}[hidden]{display:none!important}@media(max-width:480px){body{padding:14px}main{padding:25px 20px}.brand strong{font-size:18px}.brand small{font-size:11px}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px;background:linear-gradient(130deg,#034c31,#176e4b);font-family:"UTM Avo",Arial,sans-serif;color:#131c25}
+main{width:min(540px,100%);padding:32px;background:#fff;border-radius:24px;box-shadow:0 18px 60px #00362133}
+.brand{display:flex;gap:15px;align-items:center;margin-bottom:28px}
+.mark{width:65px;height:65px;border-radius:18px;background:#07562f;color:#fff;display:grid;place-items:center;font-size:22px;font-weight:700}
+.brand strong{display:block;font-size:21px}.brand small{display:block;margin-top:7px;color:#718094;font-size:13px}
+h1{font-size:27px;margin:0 0 10px}p{font-size:14px;line-height:1.6;color:#718094}
+.account{display:none;margin:18px 0 4px;padding:14px;border:1px solid #d7e6dd;border-radius:13px;background:#f3faf6;text-align:left}
+.account.show{display:block}.account b{display:block;color:#07562f;margin-bottom:5px}.account span{display:block;font-size:13px;color:#52645a;line-height:1.55}
+button{margin-top:18px;width:100%;padding:16px;border:0;border-radius:13px;background:#07562f;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+button.secondary{margin-top:10px;background:#edf3ef;color:#07562f;border:1px solid #cfe0d6}
+button:disabled{opacity:.65;cursor:wait}
+.msg{min-height:24px;font-size:13px;line-height:1.6;margin-top:16px;color:#b42c2c}
+.msg.ok{color:#17663d}.msg.warn{color:#8a5b00}
+.note{border-top:1px solid #e5e9ec;padding-top:18px;margin-top:18px;font-size:13px;line-height:1.65;color:#718094}
+.roles{margin-top:10px;font-size:12px;color:#6d7a73;line-height:1.55}
+[hidden]{display:none!important}
+@media(max-width:480px){body{padding:14px}main{padding:25px 20px}.brand strong{font-size:18px}.brand small{font-size:11px}}
 </style>
-<script src="/login.js?v=28.0" defer></script>
+<script type="module" src="/login.js?v=31.2.0"></script>
 </head>
 <body>
 <main aria-labelledby="authTitle">
-<div class="brand"><div class="mark">HTX</div><div><strong>HÀNH TINH XANH</strong><small>Phần mềm Báo giá & Quản lý đơn in ấn</small></div></div>
-<h1 id="authTitle">Đăng nhập</h1>
-<p id="authDesc">Nhập tài khoản và mật khẩu để sử dụng phần mềm.</p>
-<form id="loginForm">
-<label for="loginUsername">Tên đăng nhập</label><input id="loginUsername" name="username" autocomplete="username" maxlength="64" required placeholder="Tên đăng nhập">
-<label for="loginPassword">Mật khẩu</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Mật khẩu">
-<button id="loginBtn" type="submit">ĐĂNG NHẬP</button>
-</form>
-<form id="passwordForm" hidden>
-<label for="currentPassword">Mật khẩu hiện tại</label><input id="currentPassword" type="password" autocomplete="current-password" maxlength="128" required>
-<label for="newPassword">Mật khẩu mới</label><input id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
-<label for="confirmPassword">Nhập lại mật khẩu mới</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
-<button id="changeBtn" type="submit">LƯU MẬT KHẨU & TIẾP TỤC</button>
-<button id="cancelChangeBtn" type="button">QUAY LẠI ĐĂNG NHẬP</button>
-</form>
-<div class="msg" id="authMsg" role="alert" aria-live="polite"></div>
-<div class="note">Tài khoản nhân viên phải được Giám đốc tạo và phân quyền trước khi truy cập. Liên hệ Giám đốc nếu bạn chưa có tài khoản.</div>
+  <div class="brand"><div class="mark">HTX</div><div><strong>HÀNH TINH XANH</strong><small>Phần mềm Báo giá & Quản lý đơn in ấn</small></div></div>
+  <h1 id="authTitle">Đăng nhập</h1>
+  <p id="authDesc">Đăng nhập bằng tài khoản Google đã được Giám đốc cấp quyền.</p>
+
+  <div class="account" id="accountBox">
+    <b id="accountName">Tài khoản</b>
+    <span id="accountEmail"></span>
+    <span id="accountRole"></span>
+  </div>
+
+  <button id="loginBtn" type="button">ĐĂNG NHẬP BẰNG GOOGLE</button>
+  <button id="switchBtn" class="secondary" type="button" hidden>ĐỔI TÀI KHOẢN GOOGLE</button>
+
+  <div class="msg" id="authMsg" role="alert" aria-live="polite">Đang kiểm tra Firebase…</div>
+
+  <div class="note">
+    Quyền truy cập được áp dụng theo tài khoản đã đăng nhập. Tài khoản nhân viên phải được Giám đốc thêm email và phân quyền trước.
+    <div class="roles">Vai trò: Giám đốc · Kế toán · Nhân viên bán hàng · Nhân viên thiết kế · Nhân viên in ấn.</div>
+  </div>
 </main>
 </body>
 </html>

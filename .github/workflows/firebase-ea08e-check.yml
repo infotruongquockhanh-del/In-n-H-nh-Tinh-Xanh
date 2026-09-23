@@ -1,0 +1,50 @@
+name: HTX Firebase ea08e verification
+on:
+  push:
+    branches: [fix/firebase-ea08e-config]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node --check server.js
+      - run: node --check public/firebase-native-v31.js
+      - name: Verify Firebase target
+        run: |
+          test "$(node -p "require('./package.json').version")" = "31.1.1"
+          node -e "const p=require('./package.json'); if(!p.dependencies.firebase || !p.dependencies.firebase.startsWith('^12.19.0')) process.exit(1)"
+          node -e "const c=require('./firebase-applet-config.json'); if(c.projectId!=='in-hanh-tinh-xanh-ea08e'||c.appId!=='1:329149502:web:0e749487587567d8bd356f') process.exit(1)"
+          ! grep -R "careful-run-vmn89" public server.js firebase-applet-config.json firebase.json package.json
+          grep -q "firebasejs/12.19.0/firebase-auth.js" public/firebase-native-v31.js
+          grep -q "signInWithPopup" public/firebase-native-v31.js
+          grep -q '"database": "(default)"' firebase.json
+      - name: Probe Firebase services
+        run: |
+          auth_code=$(curl -sS -o /tmp/auth.json -w "%{http_code}" "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "AUTH_HTTP=$auth_code"
+          cat /tmp/auth.json
+          if [ "$auth_code" = "200" ]; then
+            grep -q "in-hanh-tinh-xanh-ea08e.firebaseapp.com" /tmp/auth.json
+          else
+            grep -q "CONFIGURATION_NOT_FOUND" /tmp/auth.json
+          fi
+
+          fs_code=$(curl -sS -o /tmp/firestore.json -w "%{http_code}" "https://firestore.googleapis.com/v1/projects/in-hanh-tinh-xanh-ea08e/databases/(default)/documents/config/bootstrap?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "FIRESTORE_HTTP=$fs_code"
+          cat /tmp/firestore.json
+          test "$fs_code" = "200" -o "$fs_code" = "403" -o "$fs_code" = "404" -o "$fs_code" = "400"
+      - name: Verify static server
+        run: |
+          node server.js >/tmp/server.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:3000/api/health >/tmp/health.json && break; sleep 1; done
+          grep -q '"version":"31.1.1"' /tmp/health.json
+          curl -fsS http://127.0.0.1:3000/firebase-applet-config.json | grep -q '"projectId": "in-hanh-tinh-xanh-ea08e"'

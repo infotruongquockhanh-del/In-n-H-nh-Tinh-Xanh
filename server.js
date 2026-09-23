@@ -22,10 +22,10 @@ app.get('/api/health',async(req,res)=>{
   try{
     await ensureBackendReady();
     const db=await verifyFirebaseConnection();
-    res.status(db.connected?200:503).json({ok:!!db.connected,version:'32.0.0',authentication:'internal-password',storage:'server-firestore',database:db.connected?'connected':'unavailable',code:db.code});
+    res.status(db.connected?200:503).json({ok:!!db.connected,version:'32.1.0',authentication:'internal-password',storage:'server-firestore',database:db.connected?'connected':'unavailable',code:db.code});
   }catch(err){
     const failure=publicDatabaseFailure(err)||{code:'DB_UNAVAILABLE',error:'Cơ sở dữ liệu chưa sẵn sàng.'};
-    res.status(503).json({ok:false,version:'32.0.0',authentication:'internal-password',storage:'server-firestore',...failure,requestId:req.requestId});
+    res.status(503).json({ok:false,version:'32.1.0',authentication:'internal-password',storage:'server-firestore',...failure,requestId:req.requestId});
   }
 });
 

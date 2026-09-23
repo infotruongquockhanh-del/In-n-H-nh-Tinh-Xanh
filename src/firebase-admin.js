@@ -1,70 +1,50 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { cert, applicationDefault, getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
-import { localDb } from "./local-store.js";
+import 'dotenv/config';
+import fs from 'node:fs';
+import { cert, applicationDefault, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { storagePlan } from './storage-config.js';
+import { resolveFirebaseOptions, readServiceCredential, parseObject } from './firebase-options.js';
+import { databaseError, classifyDatabaseError, createDatabaseProbe } from './database-errors.js';
 
-const __dirname=path.dirname(fileURLToPath(import.meta.url));
-function readAppletConfig(){
-  try{const p=path.join(__dirname,"..","firebase-applet-config.json");if(fs.existsSync(p))return JSON.parse(fs.readFileSync(p,"utf8"));}catch(err){console.warn("[Firebase] applet config:",err.message)}
-  return {};
+export let firebaseProjectId = '';
+export let firestoreDatabaseId = '(default)';
+let plan = { backend: 'unavailable' }, credentialSource = 'unavailable', firestoreInstance = null, authInstance = null;
+let initializationError = null, store = null;
+try {
+  try { plan = storagePlan(); } catch (cause) { throw databaseError('DB_UNSAFE_STORAGE', cause); }
+  if (plan.backend === 'firestore') {
+    const filename = new URL('../firebase-applet-config.json', import.meta.url);
+    const applet = fs.existsSync(filename) ? parseObject(fs.readFileSync(filename, 'utf8')) : {};
+    const options = resolveFirebaseOptions(process.env, applet);
+    firebaseProjectId = options.projectId; firestoreDatabaseId = options.databaseId;
+    const serviceCredential = readServiceCredential();
+    const credential = serviceCredential ? cert({ ...serviceCredential, project_id: serviceCredential.project_id || firebaseProjectId }) : applicationDefault();
+    credentialSource = serviceCredential ? 'service_account' : 'application_default';
+    const appName = 'htx-server';
+    const app = getApps().some(a => a.name === appName) ? getApp(appName) : initializeApp({ credential, projectId: firebaseProjectId }, appName);
+    if (app.options.projectId !== firebaseProjectId) throw databaseError('DB_TARGET_MISMATCH');
+    firestoreInstance = firestoreDatabaseId === '(default)' ? getFirestore(app) : getFirestore(app, firestoreDatabaseId);
+    firestoreInstance.settings({ ignoreUndefinedProperties: true });
+    authInstance = getAuth(app); store = firestoreInstance;
+  } else {
+    store = (await import('./local-store.js')).localDb;
+    credentialSource = 'local_store';
+  }
+} catch (cause) {
+  initializationError = databaseError(classifyDatabaseError(cause) || 'DB_CONFIG_INVALID', cause);
+  // The login page stays reachable to report setup errors. No usable fallback database is created.
+  console.error(JSON.stringify({ event: 'HTX_DATABASE_INITIALIZATION', code: initializationError.code }));
 }
-function normalizePrivateKey(v){return String(v||"").replace(/\\n/g,"\n").trim()}
-function parseJsonCredential(raw){
-  if(!raw)return null;
-  let parsed=JSON.parse(String(raw).trim());
-  if(typeof parsed==="string")parsed=JSON.parse(parsed);
-  if(parsed.private_key)parsed.private_key=normalizePrivateKey(parsed.private_key);
-  return parsed;
+const unavailable = () => { throw initializationError || databaseError('DB_UNAVAILABLE'); };
+export const db = store || { collection: unavailable, runTransaction: unavailable, batch: unavailable, settings: unavailable };
+export const adminAuth = authInstance || { async createCustomToken() { return null; }, async verifyIdToken() { throw databaseError('DB_CREDENTIALS_UNAVAILABLE'); } };
+export function getFirebaseDiagnostics() {
+  return { initialized: !initializationError, isCloudFirestore: !!firestoreInstance, backend: plan.backend,
+    projectId: firebaseProjectId || null, databaseId: firestoreDatabaseId, credentialSource,
+    localStoreEnabled: plan.backend === 'local' && !initializationError,
+    durable: !!firestoreInstance || process.env.HTX_LOCAL_DURABLE === 'true',
+    missing: [], error: initializationError?.message || null, code: initializationError?.code || null };
 }
-function parseBase64Credential(raw){if(!raw)return null;return parseJsonCredential(Buffer.from(String(raw).trim(),"base64").toString("utf8"))}
-
-const appletConfig=readAppletConfig();
-export const firebaseProjectId=String(process.env.FIREBASE_PROJECT_ID||appletConfig.projectId||process.env.GOOGLE_CLOUD_PROJECT||"").trim();
-export const firestoreDatabaseId=String(process.env.FIRESTORE_DATABASE_ID||appletConfig.firestoreDatabaseId||"(default)").trim();
-let firestoreInstance=null;
-let authInstance=null;
-let firebaseInitError=null;
-let credentialSource="none";
-
-function resolveCredential(){
-  const json=parseJsonCredential(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_ADMIN_CREDENTIALS || process.env.FIREBASE_ADMIN_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-  if(json){credentialSource="service_account_json";return cert(json)}
-  const b64=parseBase64Credential(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64);
-  if(b64){credentialSource="service_account_base64";return cert(b64)}
-  const email=String(process.env.FIREBASE_CLIENT_EMAIL||process.env.FIREBASE_ADMIN_CLIENT_EMAIL||"").trim();
-  const key=normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY||process.env.FIREBASE_ADMIN_PRIVATE_KEY);
-  if(email&&key&&firebaseProjectId){credentialSource="service_account_fields";return cert({projectId:firebaseProjectId,clientEmail:email,privateKey:key})}
-  if(!process.env.VERCEL){credentialSource="application_default";return applicationDefault()}
-  throw new Error("Thiếu Firebase Admin credentials trên Vercel. Cấu hình FIREBASE_SERVICE_ACCOUNT_JSON hoặc FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.");
-}
-try{
-  if(!firebaseProjectId)throw new Error("Thiếu FIREBASE_PROJECT_ID.");
-  const credential=resolveCredential();
-  const adminApp=getApps().length?getApps()[0]:initializeApp({credential,projectId:firebaseProjectId});
-  firestoreInstance=firestoreDatabaseId&&firestoreDatabaseId!=="(default)"?getFirestore(adminApp,firestoreDatabaseId):getFirestore(adminApp);
-  firestoreInstance.settings({ignoreUndefinedProperties:true});
-  authInstance=getAuth(adminApp);
-  console.log("[Firebase] Admin configured",{projectId:firebaseProjectId,databaseId:firestoreDatabaseId,credentialSource});
-}catch(err){firebaseInitError=err;console.error("[Firebase] Admin init failed:",err.message)}
-
-const allowLocalStore=process.env.ALLOW_LOCAL_STORE==="true"&&!process.env.VERCEL;
-function unavailableError(){const e=new Error("Cloud Firestore chưa kết nối: "+(firebaseInitError?.message||"Firebase Admin chưa sẵn sàng."));e.status=503;e.code="FIREBASE_NOT_CONFIGURED";return e}
-const unavailableDb=new Proxy({}, {get(_t,p){if(p==="settings")return()=>{};return()=>{throw unavailableError()}}});
-const unavailableAuth={async createCustomToken(){throw unavailableError()},async verifyIdToken(){throw unavailableError()}};
-export const db=firestoreInstance||(allowLocalStore?localDb:unavailableDb);
-export const adminAuth=authInstance||unavailableAuth;
-export function getFirebaseDiagnostics(){
-  const missing=[];
-  if(!firebaseProjectId)missing.push("FIREBASE_PROJECT_ID");
-  if(process.env.VERCEL&&credentialSource==="none")missing.push("Firebase Admin credential: FIREBASE_SERVICE_ACCOUNT_JSON (khuyến nghị) hoặc FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY");
-  return {initialized:Boolean(firestoreInstance),projectId:firebaseProjectId||null,databaseId:firestoreDatabaseId||"(default)",credentialSource,localStoreEnabled:allowLocalStore,missing,error:firebaseInitError?.message||null};
-}
-export async function verifyFirebaseConnection(){
-  const d=getFirebaseDiagnostics();
-  if(!firestoreInstance)return {...d,connected:false};
-  try{await firestoreInstance.collection("config").doc("bootstrap").get();return {...d,connected:true,error:null}}
-  catch(err){return {...d,connected:false,error:err.message}}
-}
+const probe = createDatabaseProbe(() => db.collection('config').doc('bootstrap').get());
+export async function verifyFirebaseConnection() { return { ...getFirebaseDiagnostics(), ...await probe() }; }

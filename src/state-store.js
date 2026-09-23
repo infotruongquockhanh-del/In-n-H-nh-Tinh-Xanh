@@ -1,3 +1,8 @@
+// HTX_DATA_V30
+import { safeUpsert, safeDelete, safeWriteState } from './data-safety.js';
+// HTX_AUTH_V28
+import { publicUser, approved, canRead, fail } from './access-policy.js';
+import { ensureDirectorBootstrap } from './bootstrap-auth.js';
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { db } from "./firebase-admin.js";
@@ -50,6 +55,7 @@ function stripOrderOperationalFields(order){
   delete copy.status;
   delete copy.updatedAt;
   delete copy.updatedBy;
+  delete copy.version;
   return copy;
 }
 function validateRestrictedOrderChanges(role,existingMap,incoming){
@@ -77,70 +83,20 @@ async function commitOps(ops){
   }
 }
 
-async function readCollection(key,collection,user){
-  const snap=await db.collection(collection).get();
-  let rows=snap.docs.map(d=>({...d.data(),__docId:d.id}));
-
-  if(key==="htx_auto_quotes_v5"){
-    rows.sort((a,b)=>Number(b.id||0)-Number(a.id||0));
-  }else if(key==="htx_users_v6"){
-    rows.sort((a,b)=>Number(a.id||0)-Number(b.id||0));
-    if(user.role!=="director"){
-      rows=rows.map(row=>{
-        const clean=cleanDocData(row);
-        delete clean.passwordHash;
-        return clean;
-      });
-      return rows;
-    }
+async function readCollection(key, collection, user) {
+  const snap = await db.collection(collection).get();
+  let rows = snap.docs.map(doc => ({...doc.data(), id:doc.data().id ?? doc.id}));
+  if (key === 'htx_users_v6') {
+    if (user.role !== 'director') rows = rows.filter(approved);
+    return rows.map(publicUser);
   }
+  if (!canRead(user.role, key)) return null;
+  if (key === 'htx_customer_profiles_v10') rows=rows.filter(row=>!row.mergedInto);
+  if (key === 'htx_auto_quotes_v5') rows.sort((a,b)=>Number(b.id||0)-Number(a.id||0));
   return rows.map(cleanDocData);
 }
 
-async function writeCollection(key,collection,value,user){
-  if(!Array.isArray(value)){
-    throw Object.assign(new Error(`Dữ liệu ${key} phải là mảng.`),{status:400});
-  }
-  if(!canWriteKey(user.role,key)){
-    throw Object.assign(new Error("Bạn không có quyền cập nhật dữ liệu này."),{status:403});
-  }
-  if(key==="htx_users_v6" && user.role!=="director"){
-    throw Object.assign(new Error("Chỉ Giám đốc được quản lý tài khoản."),{status:403});
-  }
-
-  const ref=db.collection(collection);
-  const current=await ref.get();
-  const existingMap=new Map(current.docs.map(d=>[d.id,cleanDocData(d.data())]));
-  const incomingMap=new Map(
-    value.map((item,index)=>[docIdFor(key,item,index),item])
-  );
-
-  const removed=[...existingMap.keys()].filter(id=>!incomingMap.has(id));
-  if(
-    removed.length &&
-    ["htx_auto_quotes_v5","htx_customer_profiles_v10","htx_users_v6"].includes(key) &&
-    user.role!=="director"
-  ){
-    throw Object.assign(new Error("Chỉ Giám đốc được xóa đơn hàng, khách hàng hoặc tài khoản."),{status:403});
-  }
-
-  if(key==="htx_auto_quotes_v5"){
-    validateRestrictedOrderChanges(user.role,existingMap,value);
-  }
-
-  const ops=[];
-  for(const [id,item] of incomingMap.entries()){
-    const old=existingMap.get(id);
-    if(!old || !same(old,item)){
-      ops.push({type:"set",ref:ref.doc(id),data:item});
-    }
-  }
-  for(const id of removed){
-    ops.push({type:"delete",ref:ref.doc(id)});
-  }
-  await commitOps(ops);
-  return {writes:ops.length,removed:removed.length};
-}
+async function writeCollection(key,collection,value,user){ return safeWriteState(key,value,user); }
 
 async function readSetting(key){
   const doc=await db.collection("settings").doc(key).get();
@@ -162,6 +118,7 @@ async function writeSetting(key,value,user){
 }
 
 export async function readStateKey(key,user={role:"director"}){
+  if (key !== 'htx_users_v6' && !canRead(user.role,key)) return null;
   const collection=COLLECTION_KEYS[key];
   if(collection)return readCollection(key,collection,user);
   if(SETTINGS_KEYS.includes(key))return readSetting(key);
@@ -171,6 +128,7 @@ export async function readStateKey(key,user={role:"director"}){
 export async function readAllState(user){
   const state={};
   await Promise.all(SYNC_KEYS.map(async key=>{
+    if (key !== 'htx_users_v6' && !canRead(user.role,key)) { state[key]=null; return; }
     const collection=COLLECTION_KEYS[key];
     if(collection)state[key]=await readCollection(key,collection,user);
     else if(SETTINGS_KEYS.includes(key))state[key]=await readSetting(key);
@@ -178,68 +136,19 @@ export async function readAllState(user){
   return state;
 }
 
-export async function writeStateKey(key,value,user){
-  if(!SYNC_KEYS.includes(key)){
-    throw Object.assign(new Error("Key dữ liệu không được hỗ trợ."),{status:400});
-  }
-
-  let result;
-  if(COLLECTION_KEYS[key]){
-    result=await writeCollection(key,COLLECTION_KEYS[key],value,user);
-  }else{
-    result=await writeSetting(key,value,user);
-  }
-
-  await db.collection("auditLogs").add({
-    action:"sync",
-    key,
-    writes:result.writes,
-    removed:result.removed,
-    userId:user.id,
-    username:user.username,
-    role:user.role,
-    at:new Date().toISOString()
-  });
-
-  return result;
-}
+export async function writeStateKey(key,value,user,expectedDigest){ return safeWriteState(key,value,user,expectedDigest); }
 
 export async function ensureBootstrap(){
-  const bootstrapRef=db.collection("config").doc("bootstrap");
-  const bootstrap=await bootstrapRef.get();
-  if(bootstrap.exists && bootstrap.data()?.initialized===true)return {created:false};
-
-  const userId="202609190001";
-  const director={
-    id:202609190001,
-    name:"Giám đốc",
-    username:"giamdoc",
-    passwordHash:passwordHash("giamdoc","123456"),
-    role:"director",
-    active:true,
-    createdAt:"Tài khoản mặc định Full-stack V22"
-  };
-
-  await db.collection("users").doc(userId).set(director,{merge:true});
-  await db.collection("config").doc("company").set(COMPANY,{merge:true});
-  await db.collection("config").doc("priceBook").set({
-    version:22,
-    products:Object.keys(priceBook),
-    priceBook,
-    updatedAt:new Date().toISOString()
-  },{merge:true});
-  await db.collection("settings").doc("htx_work_month_v7").set({
-    value:"2026-09",
-    updatedAt:new Date().toISOString(),
-    updatedBy:"bootstrap"
-  },{merge:true});
-  await bootstrapRef.set({
-    initialized:true,
-    version:22,
-    initializedAt:new Date().toISOString()
-  },{merge:true});
-
-  return {created:true};
+  await ensureDirectorBootstrap();
+  return db.runTransaction(async tx=>{
+    const refs=[db.collection('config').doc('bootstrap'),db.collection('config').doc('company'),db.collection('config').doc('priceBook'),db.collection('settings').doc('htx_work_month_v7')];
+    const snapshots=[];for(const ref of refs)snapshots.push(await tx.get(ref));
+    if(!snapshots[1].exists)tx.set(refs[1],COMPANY);
+    if(!snapshots[2].exists)tx.set(refs[2],{version:30,products:Object.keys(priceBook),priceBook,updatedAt:new Date().toISOString()});
+    if(!snapshots[3].exists)tx.set(refs[3],{value:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit'}).format(new Date()).slice(0,7),updatedBy:'bootstrap'});
+    if(!snapshots[0].exists)tx.set(refs[0],{initialized:true,version:30,initializedAt:new Date().toISOString()});
+    return {created:!snapshots[0].exists};
+  });
 }
 
 export async function getAuditLogs(limit=100){
@@ -263,101 +172,6 @@ function publicEntityData(data){
   return clean;
 }
 
-export async function upsertEntity(key,id,item,expectedVersion,user){
-  if(!COLLECTION_KEYS[key]){
-    throw Object.assign(new Error("Nhóm dữ liệu này không hỗ trợ cập nhật theo từng bản ghi."),{status:400});
-  }
-  if(!canWriteKey(user.role,key)){
-    throw Object.assign(new Error("Bạn không có quyền cập nhật dữ liệu này."),{status:403});
-  }
-  if(key==="htx_users_v6"){
-    throw Object.assign(new Error("Tài khoản phải được quản lý qua chức năng tài khoản."),{status:400});
-  }
+export async function upsertEntity(key,id,item,expectedVersion,user,mutationId){ return safeUpsert(key,id,item,expectedVersion,user,mutationId); }
 
-  const collection=COLLECTION_KEYS[key];
-  const ref=db.collection(collection).doc(String(id).replaceAll("/","_"));
-
-  const result=await db.runTransaction(async tx=>{
-    const snap=await tx.get(ref);
-    const current=snap.exists?publicEntityData(snap.data()):null;
-    const currentVersion=Number(current?.version||0);
-    const expected=Number(expectedVersion||0);
-
-    if(snap.exists && expected>0 && currentVersion>expected && current?.updatedBy && current?.updatedBy!==user.username){
-      throw Object.assign(new Error("Dữ liệu đã được người khác cập nhật. Vui lòng tải lại trước khi lưu."),{
-        status:409,
-        currentVersion
-      });
-    }
-
-    if(key==="htx_auto_quotes_v5" && ["designer","printing"].includes(user.role) && current){
-      validateRestrictedOrderChanges(user.role,new Map([[String(id),current]]),[item]);
-    }
-
-    const next={
-      ...item,
-      version:currentVersion+1,
-      updatedAt:new Date().toISOString(),
-      updatedBy:user.username
-    };
-    tx.set(ref,next,{merge:false});
-    return next;
-  });
-
-  await db.collection("auditLogs").add({
-    action:"entity_upsert",
-    key,
-    entityId:String(id),
-    userId:user.id,
-    username:user.username,
-    role:user.role,
-    at:new Date().toISOString()
-  });
-
-  return result;
-}
-
-export async function deleteEntity(key,id,expectedVersion,user){
-  if(!COLLECTION_KEYS[key]){
-    throw Object.assign(new Error("Nhóm dữ liệu này không hỗ trợ xóa theo từng bản ghi."),{status:400});
-  }
-  if(!canWriteKey(user.role,key)){
-    throw Object.assign(new Error("Bạn không có quyền cập nhật dữ liệu này."),{status:403});
-  }
-  if(["htx_auto_quotes_v5","htx_customer_profiles_v10","htx_users_v6"].includes(key) && user.role!=="director"){
-    throw Object.assign(new Error("Chỉ Giám đốc được xóa đơn hàng, khách hàng hoặc tài khoản."),{status:403});
-  }
-  if(key==="htx_users_v6"){
-    throw Object.assign(new Error("Tài khoản phải được quản lý qua chức năng tài khoản."),{status:400});
-  }
-
-  const collection=COLLECTION_KEYS[key];
-  const ref=db.collection(collection).doc(String(id).replaceAll("/","_"));
-
-  await db.runTransaction(async tx=>{
-    const snap=await tx.get(ref);
-    if(!snap.exists)return;
-    const current=snap.data();
-    const currentVersion=Number(current?.version||0);
-    const expected=Number(expectedVersion||0);
-    if(currentVersion!==expected){
-      throw Object.assign(new Error("Dữ liệu đã được người khác cập nhật. Không thể xóa phiên bản cũ."),{
-        status:409,
-        currentVersion
-      });
-    }
-    tx.delete(ref);
-  });
-
-  await db.collection("auditLogs").add({
-    action:"entity_delete",
-    key,
-    entityId:String(id),
-    userId:user.id,
-    username:user.username,
-    role:user.role,
-    at:new Date().toISOString()
-  });
-
-  return {ok:true};
-}
+export async function deleteEntity(key,id,expectedVersion,user){ return safeDelete(key,id,expectedVersion,user); }

@@ -1,144 +1,116 @@
-import { SignJWT, jwtVerify } from "jose";
-import { db, adminAuth } from "./firebase-admin.js";
-import { SESSION_COOKIE } from "./constants.js";
+import { within } from './database-errors.js';
+import { randomBytes } from 'node:crypto';
+import { SignJWT, jwtVerify } from 'jose';
+import { db, adminAuth } from './firebase-admin.js';
+import { SESSION_COOKIE } from './constants.js';
+import { ACCESS_POLICY_VERSION, approved, publicUser, legacyHash, hashPassword, verifyPassword, validSessionClaims, fail } from './access-policy.js';
 
-const fallbackSecret="HTX_DEV_ONLY_CHANGE_THIS_SESSION_SECRET_2026";
-const secretText=process.env.SESSION_SECRET || fallbackSecret;
-const secret=new TextEncoder().encode(secretText);
+const configured = process.env.SESSION_SECRET;
+const unsafeDefault = 'HTX_DEV_ONLY_CHANGE_THIS_SESSION_SECRET_2026';
+const secretText = configured && configured.length >= 32 && configured !== unsafeDefault ? configured : randomBytes(48).toString('hex');
+const secret = new TextEncoder().encode(secretText);
+if (secretText !== configured) console.warn('[SECURITY] Cần SESSION_SECRET riêng (ít nhất 32 ký tự) để giữ phiên qua các lần khởi động. Đang dùng khóa ngẫu nhiên tạm thời; không dùng khóa mặc định cũ.');
 
-if(process.env.NODE_ENV==="production" && !process.env.SESSION_SECRET){
-  console.warn("[SECURITY] SESSION_SECRET chưa được cấu hình. Hãy thêm secret riêng trong Google AI Studio/Cloud Run.");
+// Compatibility export used by older callers; new passwords use scrypt.
+export const passwordHash = (username, password) => hashPassword(password);
+export const sanitizeUser = publicUser;
+export function simpleHash(text) {
+  let h = 2166136261;
+  for (const ch of String(text ?? '')) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(16).padStart(8, '0');
 }
-
-export function simpleHash(text){
-  let h=2166136261;
-  const str=String(text??"");
-  for(let i=0;i<str.length;i++){
-    h^=str.charCodeAt(i);
-    h=Math.imul(h,16777619);
-  }
-  return ("00000000"+(h>>>0).toString(16)).slice(-8);
-}
-
-export function passwordHash(username,password){
-  return simpleHash(`${String(username).toLowerCase()}|HTX|${password}`);
-}
-
-export function sanitizeUser(user,{includePasswordHash=false}={}){
-  if(!user)return null;
-  const copy={...user};
-  if(!includePasswordHash)delete copy.passwordHash;
-  return copy;
-}
-
-export async function createRealtimeToken(user){
-  const uid=String(user.id);
-  return adminAuth.createCustomToken(uid,{
-    username:String(user.username||""),
-    role:String(user.role||""),
-    name:String(user.name||"")
+export async function loginUser(username, password) {
+  const uname = String(username || '').trim().toLowerCase();
+  if (!uname || uname.length > 64 || typeof password !== 'string' || password.length > 128) return null;
+  const query = db.collection('users').where('username', '==', uname).limit(2);
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(query);
+    if (snap.size !== 1) return null;
+    const doc = snap.docs[0];
+    const user = { ...doc.data(), id: doc.data().id ?? doc.id };
+    if (!approved(user) || !verifyPassword(uname, password, user.passwordHash)) return null;
+    const changes = {};
+    if (password.length < 8 || password === '123456') changes.mustChangePassword = true;
+    else if (!String(user.passwordHash).startsWith('scrypt$')) changes.passwordHash = hashPassword(password);
+    if (Object.keys(changes).length) tx.set(db.collection('users').doc(doc.id), changes, { merge: true });
+    return { ...user, ...changes };
   });
 }
-
-export async function restoreUserFromFirebaseIdToken(idToken){
-  const decoded=await adminAuth.verifyIdToken(String(idToken||""),true);
-  const uid=String(decoded.uid||"");
-  if(!uid)return null;
-  const doc=await db.collection("users").doc(uid).get();
-  if(!doc.exists)return null;
-  const user=doc.data();
-  if(user.active===false)return {disabled:true};
-  return user;
+export async function signSession(user) {
+  if (!approved(user)) throw fail('Tài khoản chưa được cấp quyền truy cập.', 403);
+  return new SignJWT({ uid: String(user.id), sv: Number(user.authVersion || 0), policy: ACCESS_POLICY_VERSION })
+    .setProtectedHeader({ alg: 'HS256' }).setIssuer('htx-server').setAudience('htx-web')
+    .setIssuedAt().setExpirationTime('12h').sign(secret);
 }
-
-async function signSession(user){
-  return new SignJWT({
-    uid:String(user.id),
-    username:user.username,
-    role:user.role
-  })
-    .setProtectedHeader({alg:"HS256"})
-    .setIssuedAt()
-    .setExpirationTime("30d")
-    .sign(secret);
+function cookieOptions(req) {
+  return { httpOnly: true, sameSite: 'lax', path: '/',
+    secure: process.env.NODE_ENV === 'production' || !!req?.secure || req?.headers?.['x-forwarded-proto'] === 'https' };
 }
-
-export { signSession };
-
-export async function loginUser(username,password){
-  const uname=String(username||"").trim().toLowerCase();
-  const snap=await db.collection("users").where("username","==",uname).limit(1).get();
-  if(snap.empty)return null;
-  const user=snap.docs[0].data();
-  if(user.active===false)return {disabled:true};
-  if(user.passwordHash!==passwordHash(uname,password))return null;
-  return user;
+export async function setSessionCookie(res, user, req = null) {
+  const token = await signSession(user);
+  res.cookie(SESSION_COOKIE, token, { ...cookieOptions(req), maxAge: 12 * 60 * 60 * 1000 });
+  // Never return a session bearer token to browser JavaScript.
 }
-
-export async function setSessionCookie(res,user,req=null){
-  const token=await signSession(user);
-  const isHttps = Boolean(
-    process.env.NODE_ENV==="production" ||
-    (req && (req.secure || req.headers?.["x-forwarded-proto"]==="https"))
-  );
-  res.cookie(SESSION_COOKIE,token,{
-    httpOnly:true,
-    sameSite:"lax",
-    secure:isHttps,
-    maxAge:30*24*60*60*1000,
-    path:"/"
-  });
-  return token;
+export function clearSessionCookie(res, req = null) { res.clearCookie(SESSION_COOKIE, cookieOptions(req)); }
+export async function getSessionUser(req) {
+  const token = req.cookies?.[SESSION_COOKIE];
+  if (!token) return null;
+  let payload;
+  try {
+    ({ payload } = await jwtVerify(token, secret, { algorithms: ['HS256'], issuer: 'htx-server', audience: 'htx-web' }));
+  } catch { return null; }
+  const uid = String(payload.uid || '');
+  if (!uid || uid.includes('/')) return null;
+  const doc = await db.collection('users').doc(uid).get();
+  if (!doc.exists) return null;
+  const user = { ...doc.data(), id: doc.data().id ?? doc.id };
+  return validSessionClaims(payload, user) ? user : null;
 }
-
-export function clearSessionCookie(res,req=null){
-  const isHttps = Boolean(
-    process.env.NODE_ENV==="production" ||
-    (req && (req.secure || req.headers?.["x-forwarded-proto"]==="https"))
-  );
-  res.clearCookie(SESSION_COOKIE,{
-    httpOnly:true,
-    sameSite:"lax",
-    secure:isHttps,
-    path:"/"
-  });
-}
-
-export async function getSessionUser(req){
-  let token=req.cookies?.[SESSION_COOKIE];
-  const authHeader=req.headers?.authorization;
-  if(!token && authHeader && typeof authHeader==="string" && authHeader.startsWith("Bearer ")){
-    token=authHeader.slice(7).trim();
-  }
-  if(!token)return null;
-  try{
-    const {payload}=await jwtVerify(token,secret);
-    const uid=String(payload.uid||"");
-    if(!uid)return null;
-    const doc=await db.collection("users").doc(uid).get();
-    if(!doc.exists)return null;
-    const user=doc.data();
-    if(user.active===false)return null;
-    return user;
-  }catch{
-    return null;
-  }
-}
-
-export async function requireSession(req,res,next){
-  try{
-    const user=await getSessionUser(req);
-    if(!user)return res.status(401).json({error:"Phiên đăng nhập không hợp lệ hoặc đã hết hạn."});
-    req.user=user;
+export async function requireSession(req, res, next) {
+  try {
+    const user = await getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Vui lòng đăng nhập để tiếp tục.', code: 'LOGIN_REQUIRED' });
+    req.user = user;
+    if (user.mustChangePassword && !['/api/auth/me', '/api/auth/change-password', '/api/auth/logout'].includes(req.path))
+      return res.status(403).json({ error: 'Vui lòng đổi mật khẩu trước khi sử dụng phần mềm.', code: 'PASSWORD_CHANGE_REQUIRED' });
     next();
-  }catch(err){
-    next(err);
-  }
+  } catch (err) { next(err); }
 }
-
-export function requireDirector(req,res,next){
-  if(req.user?.role!=="director"){
-    return res.status(403).json({error:"Chỉ Giám đốc có quyền thực hiện thao tác này."});
-  }
+export function requireDirector(req, res, next) {
+  if (req.user?.role !== 'director') return res.status(403).json({ error: 'Chỉ Giám đốc có quyền thực hiện thao tác này.' });
   next();
 }
+export async function revokeSessions(user) {
+  if (!user) return;
+  const ref = db.collection('users').doc(String(user.id));
+  await db.runTransaction(async tx => {
+    const doc = await tx.get(ref);
+    if (doc.exists) tx.set(ref, { authVersion: Number(doc.data().authVersion || 0) + 1 }, { merge: true });
+  });
+  try { await adminAuth.revokeRefreshTokens?.(String(user.id)); } catch (err) { console.warn('[Auth] Firebase revoke:', err.code || 'unavailable'); }
+}
+export async function changeOwnPassword(user, currentPassword, newPassword) {
+  const passwordHash = hashPassword(newPassword);
+  const ref = db.collection('users').doc(String(user.id));
+  return db.runTransaction(async tx => {
+    const doc = await tx.get(ref);
+    if (!doc.exists || !approved(doc.data()) || Number(doc.data().authVersion || 0) !== Number(user.authVersion || 0)) throw fail('Vui lòng đăng nhập lại.', 401);
+    const old = doc.data();
+    if (!verifyPassword(old.username, currentPassword, old.passwordHash)) throw fail('Mật khẩu hiện tại không đúng.', 400);
+    if (newPassword === currentPassword) throw fail('Mật khẩu mới phải khác mật khẩu hiện tại.');
+    const next = { ...old, passwordHash, mustChangePassword: false, authVersion: Number(old.authVersion || 0) + 1, updatedAt: new Date().toISOString() };
+    tx.set(ref, next);
+    return next;
+  });
+}
+export async function createRealtimeToken(user) {
+  if (!approved(user) || user.mustChangePassword) return null;
+  try {
+    return await within(adminAuth.createCustomToken(String(user.id), {
+      username: String(user.username || ''), role: user.role,
+      policy: ACCESS_POLICY_VERSION, sv: Number(user.authVersion || 0)
+    }),4000);
+  } catch (err) { console.warn('[Auth] Realtime token:', err.code || 'unavailable'); return null; }
+}
+// Old Firebase sessions must never bypass an explicit password login.
+export async function restoreUserFromFirebaseIdToken() { return null; }

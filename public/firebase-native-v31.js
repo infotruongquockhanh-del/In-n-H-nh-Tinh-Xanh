@@ -1,6 +1,6 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const realFetch = window.fetch.bind(window);
 const OWNER_EMAILS = new Set(['inhanhtinhxanh@gmail.com','info.truongquockhanh@gmail.com']);
@@ -150,7 +150,7 @@ async function initNative(){
   config=await loadConfig();
   app=initializeApp(config,'htx-native-v31');
   auth=getAuth(app);
-  db=config.firestoreDatabaseId ? getFirestore(app,config.firestoreDatabaseId) : getFirestore(app);
+  db=getFirestore(app);
   const user=await ensureFirebaseUser();
   profile=await ensureProfile(user);
   return publicUser(profile);
@@ -373,7 +373,7 @@ async function backupNative(){
   const state=await readState();
   const counts={};
   for(const [k,v] of Object.entries(state)) counts[k]=Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:0);
-  return {format:'HTX-FIREBASE-NATIVE-V31',exportedAt:now(),databaseId:config.firestoreDatabaseId,state,counts};
+  return {format:'HTX-FIREBASE-NATIVE-V31',exportedAt:now(),databaseId:'(default)',state,counts};
 }
 async function duplicateGroups(){
   requireRole(['director']);
@@ -435,9 +435,9 @@ async function handleApi(rawPath,options={}){
   const method=String(options.method||'GET').toUpperCase();
   const body=options.body?JSON.parse(options.body):{};
   try{
-    if(path==='/api/health') return jsonResponse(200,{ok:true,version:'31.0.0',mode:'firebase-native',databaseId:config.firestoreDatabaseId,authentication:'firebase-google'});
+    if(path==='/api/health') return jsonResponse(200,{ok:true,version:'31.0.0',mode:'firebase-native',databaseId:'(default)',authentication:'firebase-google'});
     if(path==='/api/firebase-config') return jsonResponse(200,{configured:true,config});
-    if(path==='/api/database-status') return jsonResponse(200,{database:{connected:true,backend:'firebase-web-sdk',projectId:config.projectId,databaseId:config.firestoreDatabaseId}});
+    if(path==='/api/database-status') return jsonResponse(200,{database:{connected:true,backend:'firebase-web-sdk',projectId:config.projectId,databaseId:'(default)'}});
     if(path==='/api/auth/me') return jsonResponse(200,{ok:true,user:publicUser(profile),firebaseNative:true});
     if(path==='/api/auth/login') return jsonResponse(200,{ok:true,user:publicUser(profile),firebaseNative:true});
     if(path==='/api/auth/change-password') return jsonResponse(400,{error:'Ứng dụng dùng Google Sign-In; không lưu mật khẩu nội bộ.',code:'GOOGLE_AUTH_ONLY'});
@@ -504,8 +504,8 @@ const ready=(async()=>{
     return realFetch(input,options);
   };
   installUiTweaks();
-  window.dispatchEvent(new CustomEvent('htx:native-firebase-ready',{detail:{user,projectId:config.projectId,databaseId:config.firestoreDatabaseId}}));
-  return {user,projectId:config.projectId,databaseId:config.firestoreDatabaseId};
+  window.dispatchEvent(new CustomEvent('htx:native-firebase-ready',{detail:{user,projectId:config.projectId,databaseId:'(default)'}}));
+  return {user,projectId:config.projectId,databaseId:'(default)'};
 })();
 window.HTXFirebaseNativeShowFatal=(err)=>showGoogleLogin(authErrorText(err));
 window.HTXFirebaseNativeReady=ready;

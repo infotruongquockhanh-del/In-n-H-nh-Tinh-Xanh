@@ -5465,9 +5465,8 @@ function enterApp() {
   refreshDesignerControls();
   renderConfigurator(); renderQuote(); renderHistory(); renderDashboard(); renderWorkMonth();
   renderCustomers(); renderPricebook(); renderInventory(); renderPayroll(); renderAccounts();
-  const requested = location.hash.replace(/^#/, '').trim();
   const pages = ['orders','quote','customers','dashboard','pricebook','inventory','payroll','accounts'];
-  const page = pages.includes(requested) && hasPagePermission(requested) ? requested : pages.find(hasPagePermission);
+  const page = hasPagePermission('orders') ? 'orders' : pages.find(hasPagePermission);
   if (!page) { showLogin(); return; }
   navigate(page, true);
 }
@@ -9314,11 +9313,11 @@ async function saveAndExport(){
 <script src="/quote-math.js?v=29.0.0"></script>
 <script src="/quote-v29.js?v=29.0.0"></script>
 <!-- HTX BUSINESS V30 -->
-<script src="/business-v30.js?v=31.2.0"></script>
-<script src="/sync-v30.js?v=31.2.0"></script>
-<script src="/app-v30.js?v=31.2.0"></script>
+<script src="/business-v30.js?v=31.3.0"></script>
+<script src="/sync-v30.js?v=31.3.0"></script>
+<script src="/app-v30.js?v=31.3.0"></script>
 <script type="module">
-  import '/firebase-native-v31.js?v=31.2.0';
+  import '/firebase-native-v31.js?v=31.3.0';
   try {
     await window.HTXFirebaseNativeReady;
     init();

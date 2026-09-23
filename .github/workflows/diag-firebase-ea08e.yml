@@ -25,6 +25,11 @@ jobs:
             "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
           echo "PASSWORD_HTTP=$code"
           cat /tmp/password.json
+      - name: Probe loginIndex bootstrap rule
+        run: |
+          code=$(curl -sS -o /tmp/loginindex.json -w "%{http_code}" "https://firestore.googleapis.com/v1/projects/in-hanh-tinh-xanh-ea08e/databases/(default)/documents/loginIndex/giamdoc?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "LOGININDEX_HTTP=$code"
+          cat /tmp/loginindex.json
       - name: Probe live website
         run: |
           code=$(curl -L -sS --max-time 20 -o /tmp/site.json -w "%{http_code}" "https://in-hanh-tinh-xanh.ai.studio/api/health")

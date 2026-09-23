@@ -1,9 +1,10 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, getRedirectResult, onAuthStateChanged, signInWithRedirect, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const realFetch = window.fetch.bind(window);
 const OWNER_EMAILS = new Set(['inhanhtinhxanh@gmail.com','info.truongquockhanh@gmail.com']);
+const EXPECTED_PROJECT_ID = 'in-hanh-tinh-xanh-ea08e';
 const COLLECTION_KEYS = {
   htx_users_v6: 'users',
   htx_auto_quotes_v5: 'orders',
@@ -42,6 +43,7 @@ async function loadConfig(){
   if(!res.ok) throw appError('Không tải được cấu hình Firebase.',503,'FIREBASE_CONFIG_MISSING');
   const cfg = await res.json();
   if(!cfg.apiKey || !cfg.projectId || !cfg.appId) throw appError('Cấu hình Firebase chưa đầy đủ.',503,'FIREBASE_CONFIG_MISSING');
+  if(cfg.projectId!==EXPECTED_PROJECT_ID) throw appError('Website đang trỏ nhầm Firebase project '+cfg.projectId+'. Cần đăng ký Web App trong '+EXPECTED_PROJECT_ID+' và cập nhật firebase-applet-config.json.',503,'FIREBASE_PROJECT_MISMATCH');
   return cfg;
 }
 function waitForAuth(timeout=5000){
@@ -53,16 +55,57 @@ function waitForAuth(timeout=5000){
     setTimeout(()=>finish(auth.currentUser),timeout);
   });
 }
+function authErrorText(err){
+  const code=String(err?.code||'');
+  if(code==='auth/operation-not-allowed') return 'Google Sign-in chưa được bật trong Firebase Authentication.';
+  if(code==='auth/unauthorized-domain') return 'Tên miền '+location.hostname+' chưa được thêm vào Firebase Authentication → Authorized domains.';
+  if(code==='auth/popup-blocked') return 'Trình duyệt đang chặn cửa sổ đăng nhập. Hãy cho phép popup cho website này rồi thử lại.';
+  if(code==='auth/popup-closed-by-user') return 'Bạn đã đóng cửa sổ Google trước khi đăng nhập xong.';
+  if(code==='auth/network-request-failed') return 'Không kết nối được tới Firebase/Google. Kiểm tra mạng rồi thử lại.';
+  if(code==='auth/api-key-not-valid.-please-pass-a-valid-api-key.' || code==='auth/invalid-api-key') return 'Firebase API key không hợp lệ hoặc đang dùng sai project.';
+  return String(err?.message||'Không đăng nhập được bằng Google.');
+}
+function showGoogleLogin(message=''){
+  const gate=document.getElementById('authGate');
+  const shell=document.getElementById('erpShell');
+  if(shell) shell.style.display='none';
+  if(!gate) return;
+  gate.classList.remove('hidden'); gate.style.display='grid';
+  gate.innerHTML=`<div class="auth-box" style="max-width:440px;text-align:center">
+    <div style="font-size:38px;margin-bottom:8px">🌿</div>
+    <h1 style="margin-bottom:8px">HÀNH TINH XANH</h1>
+    <p style="margin:0 0 18px;color:#607066">Đăng nhập bằng tài khoản Google đã được cấp quyền.</p>
+    <button id="firebaseGoogleLoginBtn" type="button" style="width:100%;border:0;border-radius:10px;padding:12px 16px;background:#07562f;color:#fff;font-weight:700;cursor:pointer">Đăng nhập bằng Google</button>
+    <div id="firebaseLoginMessage" style="min-height:22px;margin-top:14px;color:#b83434;font-size:13px;line-height:1.45">${message||''}</div>
+    <div style="margin-top:10px;color:#7a8780;font-size:11px">Firebase project yêu cầu: ${EXPECTED_PROJECT_ID}</div>
+  </div>`;
+}
 async function ensureFirebaseUser(){
   await setPersistence(auth,browserLocalPersistence);
-  try{ await getRedirectResult(auth); }catch(err){ console.warn('[HTX Firebase Auth redirect]',err.code||err.message); }
-  let user=auth.currentUser || await waitForAuth();
-  if(!user){
-    sessionStorage.setItem('htx_native_auth_redirect','1');
-    await signInWithRedirect(auth,new GoogleAuthProvider());
-    await new Promise(()=>{});
-  }
-  return user;
+  const existing=auth.currentUser || await waitForAuth(1200);
+  if(existing) return existing;
+  showGoogleLogin();
+  return await new Promise(resolve=>{
+    const bind=()=>{
+      const btn=document.getElementById('firebaseGoogleLoginBtn');
+      if(!btn){ setTimeout(bind,50); return; }
+      btn.onclick=async()=>{
+        const msg=document.getElementById('firebaseLoginMessage');
+        btn.disabled=true; btn.textContent='Đang mở Google...'; if(msg)msg.textContent='';
+        try{
+          const provider=new GoogleAuthProvider();
+          provider.setCustomParameters({prompt:'select_account'});
+          const result=await signInWithPopup(auth,provider);
+          resolve(result.user);
+        }catch(err){
+          console.warn('[HTX Firebase Google Sign-in]',err.code||err.message);
+          if(msg)msg.textContent=authErrorText(err);
+          btn.disabled=false; btn.textContent='Đăng nhập bằng Google';
+        }
+      };
+    };
+    bind();
+  });
 }
 async function allUserRows(){
   const snap=await getDocs(collection(db,'users'));
@@ -464,5 +507,6 @@ const ready=(async()=>{
   window.dispatchEvent(new CustomEvent('htx:native-firebase-ready',{detail:{user,projectId:config.projectId,databaseId:config.firestoreDatabaseId}}));
   return {user,projectId:config.projectId,databaseId:config.firestoreDatabaseId};
 })();
+window.HTXFirebaseNativeShowFatal=(err)=>showGoogleLogin(authErrorText(err));
 window.HTXFirebaseNativeReady=ready;
-window.HTXFirebaseNative={ready,reauthenticate:async()=>{await signOut(auth);await signInWithRedirect(auth,new GoogleAuthProvider());},getProfile:()=>publicUser(profile)};
+window.HTXFirebaseNative={ready,reauthenticate:async()=>{await signOut(auth);showGoogleLogin('Hãy đăng nhập lại bằng Google.');},getProfile:()=>publicUser(profile)};

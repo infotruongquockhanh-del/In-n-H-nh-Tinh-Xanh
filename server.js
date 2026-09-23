@@ -17,7 +17,7 @@ app.use((req,res,next)=>{
   }
   next();
 });
-app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.0.0',mode:'firebase-native',authentication:'firebase-google'}));
+app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.1.0',mode:'firebase-native',authentication:'firebase-google'}));
 app.get('/firebase-applet-config.json',(req,res)=>res.sendFile(path.join(__dirname,'firebase-applet-config.json')));
 app.get(['/', '/index.html', '/login', '/login.html', '/app', '/app.html'],(req,res)=>{
   res.setHeader('Cache-Control','no-store');

@@ -9314,17 +9314,17 @@ async function saveAndExport(){
 <script src="/quote-math.js?v=29.0.0"></script>
 <script src="/quote-v29.js?v=29.0.0"></script>
 <!-- HTX BUSINESS V30 -->
-<script src="/business-v30.js?v=31.0.0"></script>
-<script src="/sync-v30.js?v=31.0.0"></script>
-<script src="/app-v30.js?v=31.0.0"></script>
+<script src="/business-v30.js?v=31.1.0"></script>
+<script src="/sync-v30.js?v=31.1.0"></script>
+<script src="/app-v30.js?v=31.1.0"></script>
 <script type="module">
-  import '/firebase-native-v31.js?v=31.0.0';
+  import '/firebase-native-v31.js?v=31.1.0';
   try {
     await window.HTXFirebaseNativeReady;
     init();
   } catch (err) {
     console.error(err);
-    document.body.innerHTML='<div style="font-family:Arial;padding:40px;max-width:720px;margin:auto"><h2>Không kết nối được Firebase</h2><p>'+String(err.message||err)+'</p><p>Hãy kiểm tra Firebase Integration của ứng dụng trong Google AI Studio.</p></div>';
+    if(window.HTXFirebaseNativeShowFatal) window.HTXFirebaseNativeShowFatal(err); else document.body.innerHTML='<div style="font-family:Arial;padding:40px;max-width:720px;margin:auto"><h2>Không kết nối được Firebase</h2><p>'+String(err.message||err)+'</p></div>';
   }
 </script>
 </body>

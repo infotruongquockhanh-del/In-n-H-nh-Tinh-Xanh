@@ -1,0 +1,56 @@
+name: HTX V32 server auth verification
+on:
+  push:
+    branches: [fix/v32-server-auth]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+      - run: npm run test:pricing
+      - run: npm run test:business
+      - name: Verify V27-style internal login and durable API
+        env:
+          NODE_ENV: test
+          DATA_BACKEND: local
+        run: |
+          node server.js >/tmp/htx-v32.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:3000/api/health >/tmp/health.json && break; sleep 1; done
+          grep -q '"version":"32.0.0"' /tmp/health.json
+          grep -q '"authentication":"internal-password"' /tmp/health.json
+
+          code=$(curl -sS -o /tmp/app-noauth -w "%{http_code}" http://127.0.0.1:3000/app.html)
+          test "$code" = "303"
+
+          curl -fsS -c /tmp/cookies -H 'Content-Type: application/json'             -d '{"username":"giamdoc","password":"123456"}'             http://127.0.0.1:3000/api/auth/login >/tmp/login.json
+          grep -q '"ok":true' /tmp/login.json
+          grep -q '"username":"giamdoc"' /tmp/login.json
+          grep -q '"role":"director"' /tmp/login.json
+
+          curl -fsS -b /tmp/cookies http://127.0.0.1:3000/api/auth/me >/tmp/me.json
+          grep -q '"username":"giamdoc"' /tmp/me.json
+
+          curl -fsS -b /tmp/cookies http://127.0.0.1:3000/api/state >/tmp/state.json
+          grep -q '"htx_auto_quotes_v5"' /tmp/state.json
+          grep -q '"DH-000001"' /tmp/state.json
+
+          curl -fsS -b /tmp/cookies http://127.0.0.1:3000/app.html >/tmp/app.html
+          grep -q 'id="page-orders"' /tmp/app.html
+          grep -q "hasPagePermission('orders') ? 'orders'" /tmp/app.html
+
+          ! grep -q "firebase-native-v31.js" /tmp/app.html
+          ! grep -q "GoogleAuthProvider" public/login.js
+          grep -q "allow read, write: if false" firestore.rules
+      - name: Ensure source data remains intact
+        run: git diff --exit-code -- data/ firebase-applet-config.json

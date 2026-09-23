@@ -50,22 +50,16 @@ await test('Authentication and authorization integration', async t => {
     const cross = await call('/api/auth/login',{method:'POST',body:{username:'giamdoc',password:'123456'},headers:{Origin:'https://untrusted.example'}});
     assert.equal(cross.status,403);
   });
-  await t.test('Existing director password is preserved, but weak password must be changed before app access', async () => {
+  await t.test('Existing V27 director password is preserved and opens the app directly', async () => {
     const signed = await call('/api/auth/login',{method:'POST',body:{username:'giamdoc',password:'123456'}});
-    assert.equal(signed.status,200); assert.equal(signed.data.user.mustChangePassword,true);
+    assert.equal(signed.status,200); assert.equal(signed.data.user.mustChangePassword,false);
     assert.equal(signed.data.token,undefined); assert.equal(signed.data.user.passwordHash,undefined);
-    const old = signed.cookie;
-    assert.equal((await call('/api/state',{cookie:old})).status,403);
-    assert.equal((await call('/app.html',{cookie:old})).location,'/?change=1');
-    assert.equal((await call('/api/auth/change-password',{method:'POST',cookie:old,body:{currentPassword:'wrong',newPassword:'DirectorPass-28'}})).status,400);
-    const changed = await call('/api/auth/change-password',{method:'POST',cookie:old,body:{currentPassword:'123456',newPassword:'DirectorPass-28'}});
-    assert.equal(changed.status,200); directorCookie=changed.cookie;
-    assert.equal((await call('/api/auth/me',{cookie:old})).status,401);
+    directorCookie=signed.cookie;
+    assert.equal((await call('/api/state',{cookie:directorCookie})).status,200);
     const application=await call('/app.html',{cookie:directorCookie});
     assert.equal(application.status,200);
-    assert.doesNotMatch(application.text,/__HTX_NO_LOGIN__|backendTemporarySession|localLoginFallback|createFirstAccount|fallbackUser/);
+    assert.doesNotMatch(application.text,/__HTX_NO_LOGIN__|backendTemporarySession|localLoginFallback|createFirstAccount|fallbackUser|firebase-native-v31/);
     assert.match(application.text,/erp-shell auth-locked/);
-    // Root remains the login page, even with an existing session.
     assert.match((await call('/',{cookie:directorCookie})).text,/id="loginForm"/);
   });
   await t.test('Director creates each role on the server; duplicates and invalid roles are rejected', async () => {

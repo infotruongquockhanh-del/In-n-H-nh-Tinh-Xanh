@@ -1,0 +1,25 @@
+name: HTX V31.1 Google login checks
+on:
+  push:
+    branches: [fix/google-login-v311]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node --check server.js
+      - run: node --check public/firebase-native-v31.js
+      - name: Verify login hardening
+        run: |
+          grep -q "signInWithPopup" public/firebase-native-v31.js
+          ! grep -q "signInWithRedirect" public/firebase-native-v31.js
+          grep -q "in-hanh-tinh-xanh-ea08e" public/firebase-native-v31.js
+          grep -q "FIREBASE_PROJECT_MISMATCH" public/firebase-native-v31.js
+          grep -q "Đăng nhập bằng Google" public/firebase-native-v31.js
+          test "$(node -p "require('./package.json').version")" = "31.1.0"

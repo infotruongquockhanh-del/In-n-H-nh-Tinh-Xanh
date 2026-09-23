@@ -3,6 +3,7 @@ import express from 'express';
 import { requireDirector } from './auth.js';
 import { backupBusiness, restoreMissing, customerDuplicates, mergeCustomers } from './data-safety.js';
 import { completeDesign, designSummary, savePayroll, deletePayroll, setKpiPolicy } from './design-payroll.js';
+import { migrateBrowserState } from './browser-migration.js';
 const router=express.Router();
 const asyncRoute=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 router.get('/api/auth/draft-key',asyncRoute(async(req,res)=>{
@@ -28,4 +29,5 @@ router.get('/api/payroll/design-summary',asyncRoute(async(req,res)=>res.json(awa
 router.put('/api/payroll/:month/:employeeId',asyncRoute(async(req,res)=>res.json({ok:true,record:await savePayroll(req.params.month,req.params.employeeId,req.body,req.user)})));
 router.delete('/api/payroll/:month/:employeeId',asyncRoute(async(req,res)=>res.json(await deletePayroll(req.params.month,req.params.employeeId,req.body.expectedVersion,req.user))));
 router.put('/api/admin/design-kpi-policy',requireDirector,asyncRoute(async(req,res)=>res.json(await setKpiPolicy(req.body.rule,req.user))));
+router.post('/api/admin/migrate-browser-state',requireDirector,asyncRoute(async(req,res)=>res.json({ok:true,summary:await migrateBrowserState(req.body?.state,req.user)})));
 export default router;

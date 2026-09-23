@@ -1,130 +1,117 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, deleteUser } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const EXPECTED_PROJECT_ID='in-hanh-tinh-xanh-ea08e';
-const OWNER_EMAILS=new Set(['info.truongquockhanh@gmail.com','inhanhtinhxanh@gmail.com']);
-const ROLE_LABELS={director:'Giám đốc',accounting:'Kế toán',sales:'Nhân viên bán hàng',designer:'Nhân viên thiết kế',printing:'Nhân viên in ấn'};
+const ROLES=new Set(['director','accounting','sales','designer','printing']);
 const $=id=>document.getElementById(id);
-let auth=null,db=null,currentFirebaseUser=null;
+let auth,db,config;
 
-function cleanEmail(v){return String(v||'').trim().toLowerCase()}
-function setMessage(text,type=''){
-  $('authMsg').textContent=text||'';
-  $('authMsg').className='msg'+(type?' '+type:'');
+function usernameOf(v){
+  const x=String(v||'').trim().toLowerCase();
+  if(!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(x)) throw new Error('Tên đăng nhập phải có 3–64 ký tự, chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang.');
+  return x;
 }
-function authErrorText(err){
-  const code=String(err?.code||'');
-  if(code==='auth/unauthorized-domain') return 'Tên miền '+location.hostname+' chưa được thêm vào Firebase Authentication → Settings → Authorized domains.';
-  if(code==='auth/operation-not-allowed') return 'Google Sign-in chưa được bật trong Firebase Authentication.';
-  if(code==='auth/configuration-not-found') return 'Firebase Authentication chưa được khởi tạo cho project '+EXPECTED_PROJECT_ID+'.';
-  if(code==='auth/popup-blocked') return 'Trình duyệt đang chặn cửa sổ Google. Hãy cho phép popup cho website này.';
-  if(code==='auth/popup-closed-by-user') return 'Bạn đã đóng cửa sổ Google trước khi đăng nhập xong.';
-  if(code==='auth/network-request-failed') return 'Không kết nối được tới Firebase/Google. Kiểm tra mạng rồi thử lại.';
-  return String(err?.message||'Không đăng nhập được bằng Google.');
+function setMessage(text,type=''){ $('authMsg').textContent=text||''; $('authMsg').className='msg'+(type?' '+type:''); }
+function authMessage(err){
+  const c=String(err?.code||'');
+  if(c==='auth/operation-not-allowed') return 'Đăng nhập bằng mật khẩu đang bị tắt trong Firebase. Hãy bật Authentication → Sign-in method → Email/Password.';
+  if(c==='auth/invalid-credential'||c==='auth/invalid-login-credentials'||c==='auth/wrong-password'||c==='auth/user-not-found') return 'Tên đăng nhập hoặc mật khẩu không đúng.';
+  if(c==='auth/too-many-requests') return 'Đăng nhập sai quá nhiều lần. Vui lòng chờ một lúc rồi thử lại.';
+  if(c==='auth/network-request-failed') return 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.';
+  if(c==='auth/email-already-in-use') return 'Tài khoản cũ đã được chuyển sang Firebase nhưng chỉ mục đăng nhập chưa hoàn tất. Hãy liên hệ Giám đốc.';
+  return String(err?.message||'Không đăng nhập được.');
 }
 async function loadConfig(){
-  const res=await fetch('/firebase-applet-config.json',{cache:'no-store'});
-  if(!res.ok) throw new Error('Không tải được cấu hình Firebase.');
-  const cfg=await res.json();
-  if(cfg.projectId!==EXPECTED_PROJECT_ID) throw new Error('Website đang trỏ sai Firebase project: '+String(cfg.projectId||'không xác định')+'.');
-  return cfg;
+  const r=await fetch('/firebase-applet-config.json',{cache:'no-store'});
+  if(!r.ok) throw new Error('Không tải được cấu hình Firebase.');
+  const c=await r.json();
+  if(c.projectId!==EXPECTED_PROJECT_ID) throw new Error('Website đang trỏ sai Firebase project.');
+  return c;
 }
-async function roleFor(user){
-  const email=cleanEmail(user?.email);
-  if(OWNER_EMAILS.has(email)) return {role:'director',active:true,name:user.displayName||'Giám đốc'};
-  try{
-    const own=await getDoc(doc(db,'users',user.uid));
-    if(own.exists()){
-      const data=own.data();
-      return {role:data.role||'',active:data.active!==false,name:data.name||user.displayName||email};
-    }
-    const invite=await getDoc(doc(db,'accessByEmail',email));
-    if(invite.exists()){
-      const data=invite.data();
-      return {role:data.role||'',active:data.active!==false,name:data.name||user.displayName||email};
-    }
-  }catch(err){
-    console.warn('[HTX login role]',err.code||err.message);
-  }
-  return {role:'',active:false,name:user.displayName||email};
+async function profileFor(uid){
+  const s=await getDoc(doc(db,'users',uid));
+  if(!s.exists()) return null;
+  const u=s.data();
+  if(u.active===false||!ROLES.has(u.role)) return null;
+  return u;
 }
-async function showSignedIn(user){
-  currentFirebaseUser=user;
-  const access=await roleFor(user);
-  $('accountBox').classList.add('show');
-  $('accountName').textContent=access.name||user.displayName||'Tài khoản Google';
-  $('accountEmail').textContent=user.email||'';
-  $('accountRole').textContent=access.role?'Vai trò: '+(ROLE_LABELS[access.role]||access.role):'Chưa được phân quyền';
-  $('switchBtn').hidden=false;
+async function resolveIndex(username){
+  const s=await getDoc(doc(db,'loginIndex',username));
+  return s.exists()?s.data():null;
+}
+function makeAuthEmail(){
+  return 'u-'+crypto.randomUUID().replaceAll('-','')+'@auth.inhanhtinhxanh.invalid';
+}
+async function legacyBootstrap(username,password){
+  const r=await fetch('/api/legacy-auth/verify',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password}),cache:'no-store'
+  });
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.ok) throw new Error(data.error||'Tên đăng nhập hoặc mật khẩu không đúng.');
+  if(data.user?.role!=='director'||username!=='giamdoc') throw new Error('Tài khoản cũ này cần Giám đốc chuyển đổi trước.');
 
-  if(!access.active||!access.role){
-    $('loginBtn').textContent='TÀI KHOẢN CHƯA ĐƯỢC CẤP QUYỀN';
-    $('loginBtn').disabled=true;
-    setMessage('Email này chưa được Giám đốc cấp quyền truy cập. Hãy đổi tài khoản hoặc liên hệ Giám đốc.','warn');
-    return;
-  }
-  $('loginBtn').disabled=false;
-  $('loginBtn').textContent='TIẾP TỤC VÀO PHẦN MỀM';
-  setMessage('Đã xác thực Google. Quyền truy cập sẽ áp dụng theo vai trò '+(ROLE_LABELS[access.role]||access.role)+'.','ok');
-}
-async function startGoogleLogin(){
-  $('loginBtn').disabled=true;
-  setMessage('Đang mở cửa sổ Google…');
+  const authEmail=makeAuthEmail();
+  let cred=null;
   try{
-    const provider=new GoogleAuthProvider();
-    provider.setCustomParameters({prompt:'select_account'});
-    const result=await signInWithPopup(auth,provider);
-    await showSignedIn(result.user);
+    cred=await createUserWithEmailAndPassword(auth,authEmail,password);
+    const uid=cred.user.uid, now=new Date().toISOString();
+    const user={
+      id:data.user.id,uid,username:'giamdoc',name:data.user.name||'Giám đốc',role:'director',
+      active:true,accessApproved:true,authEmail,createdAt:data.user.createdAt||now,updatedAt:now,
+      provisionedByDirectorId:String(data.user.id),provisionedAt:now,authMode:'password'
+    };
+    const batch=writeBatch(db);
+    batch.set(doc(db,'users',uid),user);
+    batch.set(doc(db,'loginIndex','giamdoc'),{username:'giamdoc',uid,userId:data.user.id,authEmail,active:true,createdAt:now,updatedAt:now});
+    batch.set(doc(db,'config','directorOwner'),{uid,username:'giamdoc',userId:data.user.id,createdAt:now});
+    await batch.commit();
+    return user;
   }catch(err){
-    setMessage(authErrorText(err));
-    $('loginBtn').disabled=false;
-    $('loginBtn').textContent='ĐĂNG NHẬP BẰNG GOOGLE';
+    if(cred?.user){ try{await deleteUser(cred.user);}catch{} }
+    try{await signOut(auth);}catch{}
+    throw err;
   }
 }
-async function checkAuthorizedDomain(cfg){
-  try{
-    const res=await fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key='+encodeURIComponent(cfg.apiKey),{cache:'no-store'});
-    if(!res.ok)return;
-    const data=await res.json();
-    if(Array.isArray(data.authorizedDomains)&&!data.authorizedDomains.includes(location.hostname)){
-      setMessage('Cần thêm đúng tên miền '+location.hostname+' vào Firebase Authentication → Settings → Authorized domains.','warn');
+async function login(username,password){
+  const idx=await resolveIndex(username);
+  if(idx){
+    if(idx.active===false) throw new Error('Tài khoản đang bị khóa.');
+    const cred=await signInWithEmailAndPassword(auth,idx.authEmail,password);
+    const profile=await profileFor(cred.user.uid);
+    if(!profile||profile.username!==username){
+      await signOut(auth);
+      throw new Error('Tài khoản chưa được Giám đốc cấp quyền hoặc đang bị khóa.');
     }
-  }catch{}
+    return profile;
+  }
+  return await legacyBootstrap(username,password);
 }
 async function init(){
   try{
-    const cfg=await loadConfig();
-    const app=initializeApp(cfg,'htx-login-v312');
-    auth=getAuth(app);
-    db=getFirestore(app);
+    config=await loadConfig();
+    const app=initializeApp(config,'htx-internal-login-v313');
+    auth=getAuth(app); db=getFirestore(app);
     await setPersistence(auth,browserLocalPersistence);
-    $('loginBtn').onclick=async()=>{
-      if(currentFirebaseUser) location.replace('/app.html#orders');
-      else await startGoogleLogin();
-    };
-    $('switchBtn').onclick=async()=>{
-      try{await signOut(auth);}catch{}
-      currentFirebaseUser=null;
-      $('accountBox').classList.remove('show');
-      $('switchBtn').hidden=true;
-      $('loginBtn').disabled=false;
-      $('loginBtn').textContent='ĐĂNG NHẬP BẰNG GOOGLE';
-      setMessage('Chọn tài khoản Google khác để đăng nhập.');
-      await startGoogleLogin();
-    };
-    let handled=false;
-    onAuthStateChanged(auth,async user=>{
-      if(handled)return;
-      handled=true;
-      if(user) await showSignedIn(user);
-      else{
-        setMessage('Sẵn sàng đăng nhập.','ok');
-        await checkAuthorizedDomain(cfg);
-      }
-    },err=>setMessage(authErrorText(err)));
+    try{await signOut(auth);}catch{}
+    setMessage('');
+    $('loginForm').addEventListener('submit',async e=>{
+      e.preventDefault();
+      $('loginBtn').disabled=true; setMessage('Đang xác thực…');
+      try{
+        const username=usernameOf($('loginUsername').value);
+        const password=$('loginPassword').value;
+        if(password.length<6) throw new Error('Mật khẩu không đúng.');
+        const user=await login(username,password);
+        setMessage('Đăng nhập thành công: '+(user.name||user.username)+'.','ok');
+        location.replace('/app.html#orders');
+      }catch(err){
+        setMessage(authMessage(err));
+        try{await signOut(auth);}catch{}
+      }finally{$('loginBtn').disabled=false;}
+    });
   }catch(err){
-    setMessage(String(err?.message||err));
+    setMessage(authMessage(err));
     $('loginBtn').disabled=true;
   }
 }

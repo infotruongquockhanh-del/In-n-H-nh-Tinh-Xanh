@@ -1,13 +1,19 @@
 import 'dotenv/config';
 import express from 'express';
+import fs from 'node:fs';
+import { verifyPassword, approved, publicUser } from './src/access-policy.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express();
 const port=Number(process.env.PORT||3000);
+const legacyDb=JSON.parse(fs.readFileSync(path.join(__dirname,'data','local-database.json'),'utf8'));
+const legacyUsers=Array.isArray(legacyDb.htx_users_v6)?legacyDb.htx_users_v6:[];
+const legacyAttempts=new Map();
 app.set('trust proxy',1);
 app.disable('x-powered-by');
+app.use(express.json({limit:'32kb'}));
 app.use((req,res,next)=>{
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','same-origin');
@@ -17,7 +23,22 @@ app.use((req,res,next)=>{
   }
   next();
 });
-app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.2.0',mode:'firebase-native',authentication:'firebase-google'}));
+app.get('/api/health',(req,res)=>res.json({ok:true,version:'31.3.0',mode:'firebase-native',authentication:'firebase-password'}));
+app.post('/api/legacy-auth/verify',(req,res)=>{
+  const username=String(req.body?.username||'').trim().toLowerCase();
+  const password=typeof req.body?.password==='string'?req.body.password:'';
+  const ip=String(req.headers['x-forwarded-for']||req.socket?.remoteAddress||'').split(',')[0].trim();
+  const key=ip+'|'+username, now=Date.now(), state=legacyAttempts.get(key)||{count:0,until:0};
+  if(state.until>now) return res.status(429).json({ok:false,error:'Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau.'});
+  const user=legacyUsers.find(x=>String(x.username||'').toLowerCase()===username);
+  if(!user||!approved(user)||!verifyPassword(username,password,user.passwordHash)){
+    const count=state.count+1;
+    legacyAttempts.set(key,count>=5?{count:0,until:now+10*60*1000}:{count,until:0});
+    return res.status(401).json({ok:false,error:'Tên đăng nhập hoặc mật khẩu không đúng.'});
+  }
+  legacyAttempts.delete(key);
+  return res.json({ok:true,user:publicUser(user)});
+});
 app.get('/firebase-applet-config.json',(req,res)=>res.sendFile(path.join(__dirname,'firebase-applet-config.json')));
 app.get(['/', '/index.html', '/login', '/login.html'],(req,res)=>{
   res.setHeader('Cache-Control','no-store');

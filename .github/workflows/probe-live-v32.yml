@@ -1,0 +1,15 @@
+name: Probe live V32
+on:
+  push:
+    branches: [diag/live-v32]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe live health
+        run: |
+          code=$(curl -L -sS --max-time 30 -o /tmp/health -w "%{http_code}" "https://in-hanh-tinh-xanh.ai.studio/api/health")
+          echo "HTTP=$code"
+          cat /tmp/health

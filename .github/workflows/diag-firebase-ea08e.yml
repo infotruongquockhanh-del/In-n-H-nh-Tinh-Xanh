@@ -8,14 +8,18 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe Firebase hosting config
-        shell: bash
+      - name: Probe Firebase Authentication
         run: |
-          set +e
-          for u in             "https://in-hanh-tinh-xanh-ea08e.firebaseapp.com/__/firebase/init.json"             "https://in-hanh-tinh-xanh-ea08e.web.app/__/firebase/init.json"; do
-            echo "=== $u ==="
-            code=$(curl -L -sS --max-time 20 -o /tmp/out -w "%{http_code}" "$u")
-            echo "HTTP=$code"
-            head -c 4000 /tmp/out
-            echo
-          done
+          code=$(curl -sS -o /tmp/auth.json -w "%{http_code}" "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "AUTH_HTTP=$code"
+          cat /tmp/auth.json
+      - name: Probe Cloud Firestore
+        run: |
+          code=$(curl -sS -o /tmp/fs.json -w "%{http_code}" "https://firestore.googleapis.com/v1/projects/in-hanh-tinh-xanh-ea08e/databases/(default)/documents/config/bootstrap?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "FIRESTORE_HTTP=$code"
+          cat /tmp/fs.json
+      - name: Probe live website
+        run: |
+          code=$(curl -L -sS --max-time 20 -o /tmp/site.json -w "%{http_code}" "https://in-hanh-tinh-xanh.ai.studio/api/health")
+          echo "SITE_HTTP=$code"
+          cat /tmp/site.json

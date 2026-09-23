@@ -1,0 +1,36 @@
+name: V31.3 internal auth
+on:
+  push:
+    branches: [fix/internal-auth-v313]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node --check server.js
+      - run: node --check public/login.js
+      - run: node --check public/firebase-native-v31.js
+      - run: |
+          test "$(node -p "require('./package.json').version")" = "31.3.0"
+          grep -q "signInWithEmailAndPassword" public/login.js
+          grep -q "createUserWithEmailAndPassword" public/firebase-native-v31.js
+          grep -q "loginIndex" firestore.rules
+          grep -q "sign_in_provider == 'password'" firestore.rules
+          grep -q "hasPagePermission('orders') ? 'orders'" public/app.html
+          ! grep -q "GoogleAuthProvider" public/login.js
+          ! grep -q "GoogleAuthProvider" public/firebase-native-v31.js
+      - run: |
+          node server.js >/tmp/htx.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:3000/api/health >/tmp/health && break; sleep 1; done
+          grep -q '"version":"31.3.0"' /tmp/health
+          grep -q '"authentication":"firebase-password"' /tmp/health
+          code=$(curl -sS -o /tmp/bad -w "%{http_code}" -H "Content-Type: application/json" -d '{"username":"giamdoc","password":"definitely-wrong-password"}' http://127.0.0.1:3000/api/legacy-auth/verify)
+          test "$code" = "401"

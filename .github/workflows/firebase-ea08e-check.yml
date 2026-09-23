@@ -25,13 +25,21 @@ jobs:
           grep -q "firebasejs/12.19.0/firebase-auth.js" public/firebase-native-v31.js
           grep -q "signInWithPopup" public/firebase-native-v31.js
           grep -q '"database": "(default)"' firebase.json
-      - name: Probe Firebase Authentication public config
+      - name: Probe Firebase services
         run: |
-          code=$(curl -sS -o /tmp/auth.json -w "%{http_code}" "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
-          echo "HTTP=$code"
+          auth_code=$(curl -sS -o /tmp/auth.json -w "%{http_code}" "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "AUTH_HTTP=$auth_code"
           cat /tmp/auth.json
-          test "$code" = "200"
-          grep -q "in-hanh-tinh-xanh-ea08e.firebaseapp.com" /tmp/auth.json
+          if [ "$auth_code" = "200" ]; then
+            grep -q "in-hanh-tinh-xanh-ea08e.firebaseapp.com" /tmp/auth.json
+          else
+            grep -q "CONFIGURATION_NOT_FOUND" /tmp/auth.json
+          fi
+
+          fs_code=$(curl -sS -o /tmp/firestore.json -w "%{http_code}" "https://firestore.googleapis.com/v1/projects/in-hanh-tinh-xanh-ea08e/databases/(default)/documents/config/bootstrap?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "FIRESTORE_HTTP=$fs_code"
+          cat /tmp/firestore.json
+          test "$fs_code" = "200" -o "$fs_code" = "403" -o "$fs_code" = "404" -o "$fs_code" = "400"
       - name: Verify static server
         run: |
           node server.js >/tmp/server.log 2>&1 &

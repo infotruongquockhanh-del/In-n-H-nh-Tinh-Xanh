@@ -1,0 +1,29 @@
+name: Export exact V27 source
+on:
+  push:
+    branches: [export/v27-source]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c2a09fb5a1c6d535d4aa4fe470f0cfb43621ffa1
+          fetch-depth: 0
+      - name: Verify exact V27
+        run: |
+          test "$(git rev-parse HEAD)" = "c2a09fb5a1c6d535d4aa4fe470f0cfb43621ffa1"
+          test "$(node -p "require('./package.json').version")" = "27.0.0"
+      - name: Create source ZIP
+        run: |
+          git archive --format=zip --prefix=Hanh-Tinh-Xanh-V27/ -o Hanh-Tinh-Xanh-V27-FULL-SOURCE.zip c2a09fb5a1c6d535d4aa4fe470f0cfb43621ffa1
+          sha256sum Hanh-Tinh-Xanh-V27-FULL-SOURCE.zip > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HTX-V27-FULL-SOURCE
+          path: |
+            Hanh-Tinh-Xanh-V27-FULL-SOURCE.zip
+            SHA256SUMS.txt
+          retention-days: 30

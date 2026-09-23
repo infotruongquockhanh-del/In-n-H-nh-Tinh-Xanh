@@ -1,0 +1,31 @@
+name: HTX V32.1 data preservation
+on:
+  push:
+    branches: [fix/v321-data-preservation]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+      - run: npm run test:pricing
+      - run: npm run test:business
+      - run: node --test tests/browser-migration.test.mjs
+      - name: Verify V32.1 source wiring
+        run: |
+          test "$(node -p "require('./package.json').version")" = "32.1.0"
+          grep -q "collectLegacyBrowserState" public/app.html
+          grep -q "preserveBusiness:true" public/app.html
+          grep -q "migrate-browser-state" src/routes-v30.js
+          grep -q "migratedFrom:'browser-local-storage'" src/browser-migration.js
+          grep -q "version:'32.1.0'" server.js
+      - name: Ensure source data remains intact
+        run: git diff --exit-code -- data/ firebase-applet-config.json

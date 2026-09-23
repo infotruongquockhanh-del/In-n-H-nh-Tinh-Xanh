@@ -1,14 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function email() { return request.auth != null ? request.auth.token.email : null; }
-    function owner() {
+    function passwordAuth() {
       return request.auth != null
-        && email() in ['inhanhtinhxanh@gmail.com','info.truongquockhanh@gmail.com'];
+        && request.auth.token.firebase.sign_in_provider == 'password';
     }
     function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
-    function invitePath() { return /databases/$(database)/documents/accessByEmail/$(email()); }
-    function hasUser() { return request.auth != null && exists(userPath()); }
+    function ownerPath() { return /databases/$(database)/documents/config/directorOwner; }
+    function hasUser() { return passwordAuth() && exists(userPath()); }
     function user() { return get(userPath()).data; }
     function active() {
       return hasUser() && user().active == true
@@ -17,26 +16,40 @@ service cloud.firestore {
     function director() { return active() && user().role == 'director'; }
     function office() { return active() && user().role in ['director','accounting','sales']; }
     function payroll() { return active() && user().role in ['director','accounting']; }
-    function invited() {
-      return request.auth != null && email() != null && exists(invitePath())
-        && get(invitePath()).data.active == true;
-    }
-    match /users/{uid} {
-      allow read: if owner() || (active() && (request.auth.uid == uid || director()));
-      allow create: if request.auth != null && request.auth.uid == uid
-        && (
-          (owner() && request.resource.data.role == 'director' && request.resource.data.active == true)
-          || (invited()
-              && request.resource.data.role == get(invitePath()).data.role
-              && request.resource.data.id == get(invitePath()).data.id
-              && request.resource.data.active == true)
-        );
+    function noDirectorOwner() { return !exists(ownerPath()); }
+
+    match /loginIndex/{username} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if director()
+        || (passwordAuth() && noDirectorOwner() && username == 'giamdoc'
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.authEmail == request.auth.token.email
+          && request.resource.data.active == true);
       allow update, delete: if director();
     }
-    match /accessByEmail/{mail} {
-      allow read: if request.auth != null && (director() || email() == mail);
-      allow create, update, delete: if director();
+
+    match /users/{uid} {
+      allow read: if director()
+        || (passwordAuth() && request.auth.uid == uid && resource.data.active == true)
+        || (passwordAuth() && request.auth.uid == uid && noDirectorOwner());
+      allow create: if director()
+        || (passwordAuth() && request.auth.uid == uid && noDirectorOwner()
+          && request.resource.data.username == 'giamdoc'
+          && request.resource.data.role == 'director'
+          && request.resource.data.active == true
+          && request.resource.data.authEmail == request.auth.token.email);
+      allow update, delete: if director();
     }
+
+    match /config/directorOwner {
+      allow read: if passwordAuth();
+      allow create: if passwordAuth() && noDirectorOwner()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username == 'giamdoc';
+      allow update, delete: if director();
+    }
+
     match /orders/{id} {
       allow read: if active();
       allow create, delete: if office();
@@ -50,12 +63,8 @@ service cloud.firestore {
       allow create, update: if office();
       allow delete: if director();
     }
-    match /inventory/{id} {
-      allow read, create, update, delete: if office();
-    }
-    match /customProducts/{id} {
-      allow read, create, update, delete: if office();
-    }
+    match /inventory/{id} { allow read, create, update, delete: if office(); }
+    match /customProducts/{id} { allow read, create, update, delete: if office(); }
     match /settings/{id} {
       allow read: if active() && (id != 'htx_payroll_v17' || payroll());
       allow write: if (id == 'htx_payroll_v17' && payroll())

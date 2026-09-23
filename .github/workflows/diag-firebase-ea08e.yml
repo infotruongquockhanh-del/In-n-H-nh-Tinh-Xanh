@@ -18,6 +18,13 @@ jobs:
           code=$(curl -sS -o /tmp/fs.json -w "%{http_code}" "https://firestore.googleapis.com/v1/projects/in-hanh-tinh-xanh-ea08e/databases/(default)/documents/config/bootstrap?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
           echo "FIRESTORE_HTTP=$code"
           cat /tmp/fs.json
+      - name: Probe Email Password provider
+        run: |
+          code=$(curl -sS -o /tmp/password.json -w "%{http_code}" -H "Content-Type: application/json" \
+            -d '{"email":"probe-do-not-use@invalid.example","password":"Probe-Password-123!","returnSecureToken":true}' \
+            "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDG8zKczlv4CK4EjOHFpg5HlefO3B8YrmA")
+          echo "PASSWORD_HTTP=$code"
+          cat /tmp/password.json
       - name: Probe live website
         run: |
           code=$(curl -L -sS --max-time 20 -o /tmp/site.json -w "%{http_code}" "https://in-hanh-tinh-xanh.ai.studio/api/health")

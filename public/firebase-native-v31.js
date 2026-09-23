@@ -57,13 +57,17 @@ function waitForAuth(timeout=5000){
 }
 function authErrorText(err){
   const code=String(err?.code||'');
+  if(code==='auth/configuration-not-found') return 'Firebase Authentication của project in-hanh-tinh-xanh-ea08e chưa được khởi tạo. Vào Firebase Console → Authentication → Get started, sau đó bật Google Sign-in.';
   if(code==='auth/operation-not-allowed') return 'Google Sign-in chưa được bật trong Firebase Authentication.';
   if(code==='auth/unauthorized-domain') return 'Tên miền '+location.hostname+' chưa được thêm vào Firebase Authentication → Authorized domains.';
   if(code==='auth/popup-blocked') return 'Trình duyệt đang chặn cửa sổ đăng nhập. Hãy cho phép popup cho website này rồi thử lại.';
   if(code==='auth/popup-closed-by-user') return 'Bạn đã đóng cửa sổ Google trước khi đăng nhập xong.';
   if(code==='auth/network-request-failed') return 'Không kết nối được tới Firebase/Google. Kiểm tra mạng rồi thử lại.';
   if(code==='auth/api-key-not-valid.-please-pass-a-valid-api-key.' || code==='auth/invalid-api-key') return 'Firebase API key không hợp lệ hoặc đang dùng sai project.';
-  return String(err?.message||'Không đăng nhập được bằng Google.');
+  const message=String(err?.message||'');
+  if(code==='permission-denied' && /firestore|firestore.googleapis.com/i.test(message)) return 'Cloud Firestore chưa được bật hoặc chưa tạo database cho project in-hanh-tinh-xanh-ea08e. Hãy bật Firestore API và tạo Firestore Database trước.';
+  if(code==='failed-precondition' && /firestore|database/i.test(message)) return 'Firestore Database chưa sẵn sàng. Hãy tạo database (default) trong Firebase Console.';
+  return message||'Không đăng nhập được bằng Google.';
 }
 function showGoogleLogin(message=''){
   const gate=document.getElementById('authGate');

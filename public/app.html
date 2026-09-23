@@ -1,3 +1,4 @@
+<!-- HTX_AUTH_V28 -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -13,7 +14,7 @@
 <meta property="og:description" content="Hệ thống quản lý in ấn, báo giá tự động, đơn hàng, khách hàng, kho và doanh thu Hành Tinh Xanh">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<title>Hành Tinh Xanh V28.1 - Trang chủ trực tiếp</title>
+<title>Hành Tinh Xanh</title>
 <style>
 :root{
   --green:#07562f;
@@ -432,20 +433,28 @@ body{
 
 .erp-shell{
   min-height:100vh;
-  display:grid;
-  grid-template-columns:252px minmax(0,1fr);
+  display:flex;
+  flex-direction:row;
+  width:100%;
 }
 .sidebar{
-  position:fixed;
-  inset:0 auto 0 0;
-  width:252px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  width:256px;
+  min-width:256px;
+  max-width:256px;
+  flex:0 0 256px;
   background:linear-gradient(180deg,#06482a 0%,#075a34 48%,#06482a 100%);
   color:#fff;
   padding:18px 14px;
   display:flex;
   flex-direction:column;
   z-index:50;
-  box-shadow:12px 0 34px rgba(6,48,29,.10);
+  box-shadow:6px 0 24px rgba(6,48,29,.08);
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
 }
 .brand{
   display:flex;
@@ -531,12 +540,16 @@ body{
 .sidebar-info span{font-size:9px;line-height:1.45;opacity:.68}
 
 .workspace{
-  grid-column:2;
+  flex:1 1 0%;
   min-width:0;
   min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  background:#f4f7f5;
 }
 .topbar{
-  height:74px;
+  min-height:70px;
+  height:auto;
   position:sticky;
   top:0;
   z-index:30;
@@ -544,10 +557,11 @@ body{
   align-items:center;
   justify-content:space-between;
   gap:16px;
-  padding:0 26px;
+  padding:10px 26px;
   background:rgba(255,255,255,.94);
   backdrop-filter:blur(12px);
   border-bottom:1px solid #e3e8e5;
+  box-shadow:0 1px 4px rgba(0,0,0,.03);
 }
 .topbar-left{display:flex;align-items:center;gap:12px;min-width:0}
 .mobile-menu{
@@ -954,14 +968,22 @@ body{
   .pricebook-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:840px){
-  .erp-shell{display:block}
+  .erp-shell{display:block!important}
   .sidebar{
-    transform:translateX(-105%);
-    transition:.2s ease;
-    width:252px;
+    position:fixed!important;
+    inset:0 auto 0 0!important;
+    transform:translateX(-105%)!important;
+    transition:transform .25s cubic-bezier(0.4, 0, 0.2, 1)!important;
+    width:min(86vw, 320px)!important;
+    min-width:0!important;
+    max-width:none!important;
+    flex:none!important;
+    height:100%!important;
+    z-index:60!important;
+    box-shadow:12px 0 36px rgba(0,0,0,.35)!important;
   }
-  .sidebar.open{transform:translateX(0)}
-  .workspace{min-height:100vh}
+  .sidebar.open{transform:translateX(0)!important}
+  .workspace{width:100%!important;min-height:100vh}
   .mobile-menu{display:block}
   .topbar{padding:0 14px;height:66px}
   .page-host{padding:16px 13px 30px}
@@ -1257,37 +1279,136 @@ body{
 .month-toolbar{
   display:flex;
   align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  padding:14px 18px;
+  border:1px solid #dce4df;
+  background:#ffffff;
+  border-radius:14px;
+  margin-top:16px;
+  box-shadow:0 2px 12px rgba(23,98,60,.04);
+}
+.month-toolbar-left{
+  display:flex;
+  align-items:center;
   gap:10px;
   flex-wrap:wrap;
-  padding:13px 15px;
-  border:1px solid #e1e7e3;
+}
+.month-toolbar-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:#eef6f1;
+  color:#155235;
+  font-family:"UTM AvoBold","UTM Avo",Arial,sans-serif;
+  font-size:12px;
+  padding:6px 11px;
+  border-radius:8px;
+  border:1px solid #cce2d5;
+}
+.month-toolbar-input{
+  min-height:36px;
+  border:1px solid #cad6cf;
+  border-radius:8px;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:600;
+  color:#21352a;
   background:#fff;
-  border-radius:14px;
-  margin-bottom:15px;
+  cursor:pointer;
 }
-.month-toolbar strong{
+.month-pill-label{
+  font-size:12px;
+  font-weight:600;
+  color:#17623c;
+  background:#f2f7f4;
+  padding:6px 10px;
+  border-radius:7px;
+  border:1px solid #dae5df;
+}
+.month-nav-group{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.month-nav-btn{
+  height:34px;
+  padding:0 10px;
+  border:1px solid #cad6cf;
+  background:#f7faf8;
+  border-radius:7px;
+  color:#314238;
   font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  transition:all .15s ease;
 }
-.month-toolbar input{
-  min-height:38px;
-  border:1px solid #d7dfda;
-  border-radius:9px;
-  padding:0 9px;
+.month-nav-btn:hover{
+  background:#e9f2ec;
+  border-color:#b7cebf;
+  color:#12492e;
+}
+.month-nav-btn.primary{
+  background:#17623c;
+  color:#fff;
+  border-color:#17623c;
+}
+.month-nav-btn.primary:hover{
+  background:#0f4a2c;
+}
+.month-toolbar-pills{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.month-pill-stat{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 11px;
+  border-radius:20px;
+  background:#f4f8f5;
+  border:1px solid #e1e9e3;
+  font-size:11px;
+  color:#49574f;
+}
+.month-pill-stat strong{
+  color:#12492e;
+  font-family:"UTM AvoBold","UTM Avo",Arial,sans-serif;
 }
 .month-orders{
   display:grid;
-  gap:9px;
+  gap:0;
+  max-height:480px;
+  overflow-y:auto;
 }
 .month-order-row{
   display:grid;
-  grid-template-columns:120px minmax(160px,1fr) 145px 115px 110px;
-  gap:9px;
+  grid-template-columns:125px minmax(160px,1.4fr) 130px 120px 100px 80px;
+  gap:10px;
   align-items:center;
-  border-bottom:1px solid #edf0ee;
-  padding:9px 0;
-  font-size:9px;
+  border-bottom:1px solid #edf2ee;
+  padding:11px 16px;
+  font-size:12px;
+  transition:background .15s ease;
 }
+.month-order-row:hover{background:#f8fbf9}
 .month-order-row:last-child{border-bottom:0}
+@media(max-width:768px){
+  .month-toolbar{padding:12px 14px}
+  .month-toolbar-left,.month-toolbar-pills{width:100%}
+  .month-order-row{
+    grid-template-columns:1fr;
+    gap:6px;
+    padding:12px;
+    border-bottom:1px solid #e6ece8;
+  }
+}
 
 .catalog-toolbar{
   display:flex;
@@ -3165,66 +3286,23 @@ body.sidebar-open{
 }
 
 
-/* V27.4 HARD DISABLE LOGIN */
-#authGate,.auth-gate{display:none!important;visibility:hidden!important;pointer-events:none!important}
-#erpShell.erp-shell,#erpShell.auth-locked{display:flex!important}
-html.has-cached-session #erpShell{display:flex!important}
-/* ===== V28 UI TỐI ƯU ===== */
-.dashboard-compact-hero{margin-bottom:14px}
-.dashboard-month-toolbar{margin:0 0 14px}
-.dashboard-month-metrics{margin:14px 0}
-.dashboard-month-orders-panel{margin-top:16px}
-.dashboard-action-table{min-width:980px}
-.order-card-with-priority{
-  position:relative;
-  overflow:hidden;
-  padding-left:58px!important;
-}
-.order-card-main{min-width:0}
-.order-priority-column{
-  position:absolute;
-  left:0;top:0;bottom:0;
-  width:46px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  writing-mode:vertical-rl;
-  transform:rotate(180deg);
-  font-family:"UTM AvoBold","UTM Avo",Arial,sans-serif;
-  font-size:10px;
-  letter-spacing:1.2px;
-  border-right:1px solid #e2e7e4;
-}
-.order-priority-column.urgent{
-  background:#cf302b;
-  color:#fff;
-  border-color:#cf302b;
-}
-.order-priority-column.normal{
-  background:#f3f6f4;
-  color:#8a958f;
-}
-.sidebar-info,.install-app-btn{display:none!important}
-@media(max-width:760px){
-  .order-card-with-priority{padding-left:48px!important}
-  .order-priority-column{width:38px;font-size:9px}
-  .dashboard-action-table{min-width:820px}
-}
-
-/* ===== V28.1: MỞ THẲNG TRANG CHỦ ===== */
-.auth-gate,.auth-box,#authGate{display:none!important}
-#erpShell{display:flex!important}
+#erpShell.auth-locked{display:none!important}
+#authGate.hidden{display:none!important}
 </style>
 </head>
 <body>
+<script>
+// V30: no unconditional cache wipe at page load. Authentication remains server-side.
+</script>
 
-<div class="erp-shell" id="erpShell">
+<div class="auth-gate" id="authGate"><div class="auth-box"><h1>HÀNH TINH XANH</h1><p>Đang kiểm tra phiên đăng nhập…</p></div></div>
+<div class="erp-shell auth-locked" id="erpShell">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="brand-mark">HTX</div>
       <div class="brand-text">
         <strong>HÀNH TINH XANH</strong>
-        <span>Báo giá & Quản lý đơn in ấn · V28.1</span>
+        <span>Báo giá & Quản lý đơn in ấn · V30.0</span>
       </div>
     </div>
 
@@ -3247,48 +3325,58 @@ html.has-cached-session #erpShell{display:flex!important}
       <div class="topbar-left">
         <button class="mobile-menu" id="mobileMenu">☰</button>
         <div class="page-heading">
-          <h1 id="pageTitle">Tổng quan</h1>
-          <p id="pageSubtitle">Doanh thu, công nợ và tháng làm việc trên một màn hình</p>
+          <h1 id="pageTitle">Tổng quan & Tháng làm việc</h1>
+          <p id="pageSubtitle">Theo dõi doanh thu, tiến độ, dòng tiền và công nợ tập trung</p>
         </div>
       </div>
       <div class="topbar-actions">
-        <div class="top-date" id="topDate"></div>
-        <div class="work-month-chip">
-          <span>Tháng làm việc</span>
-          <input id="globalWorkMonth" type="month" value="2026-09">
-        </div>
         <div class="user-chip" id="userChip">
           <div class="user-avatar" id="userAvatar">U</div>
           <div><strong id="currentUserName">Người dùng</strong><span id="currentUserRole">Vai trò</span></div>
         </div>
         <span class="cloud-sync-badge offline" id="cloudSyncStatus" title="Trạng thái đồng bộ dữ liệu">Cloud: đang kết nối</span>
+        <button class="install-app-btn" id="installAppBtn" type="button" title="Cài phần mềm như một ứng dụng">Cài app</button>
         <button class="quick-btn" id="topNewQuote">+ Tạo báo giá mới</button>
+        <button class="logout-btn" id="logoutBtn">Đăng xuất</button>
       </div>
     </header>
 
     <main class="page-host">
-      <!-- DASHBOARD + THÁNG LÀM VIỆC -->
-      <section class="app-page active" id="page-dashboard">
-        <div class="hero dashboard-compact-hero">
+      <!-- DASHBOARD -->
+      <section class="app-page" id="page-dashboard">
+        <div class="hero">
           <div>
-            <h2>Tổng quan & Tháng làm việc</h2>
-            <p>Theo dõi doanh thu, công nợ, đơn cần xử lý và hoạt động của tháng đang chọn trên cùng một màn hình.</p>
+            <h2>Quản lý in ấn gọn trong một màn hình</h2>
+            <p>Giữ nguyên toàn bộ 17 bảng giá Hành Tinh Xanh, tự động tính giá, theo dõi tiến độ sản xuất, công nợ và xuất Excel ngay trên trình duyệt.</p>
           </div>
           <div class="hero-actions">
             <button class="hero-btn primary" onclick="newQuote()">+ Tạo báo giá</button>
-            <button class="hero-btn" onclick="navigate('orders')">Đơn sản xuất</button>
+            <button class="hero-btn" onclick="navigate('orders')">Xem đơn sản xuất</button>
           </div>
         </div>
 
-        <div class="month-toolbar dashboard-month-toolbar">
-          <strong>Tháng làm việc:</strong>
-          <input id="workMonthPicker" type="month" value="2026-09">
-          <span class="muted" id="workMonthLabel">Tháng 09/2026</span>
+        <div class="month-toolbar">
+          <div class="month-toolbar-left">
+            <span class="month-toolbar-badge">📅 THÁNG LÀM VIỆC</span>
+            <input id="workMonthPicker" type="month" value="2026-09" class="month-toolbar-input" title="Chọn tháng làm việc">
+            <span class="month-pill-label" id="workMonthLabel">Tháng 09/2026</span>
+            <div class="month-nav-group">
+              <button type="button" class="month-nav-btn" onclick="changeWorkMonthOffset(-1)">◀ Tháng trước</button>
+              <button type="button" class="month-nav-btn primary" onclick="setWorkMonthCurrent()">● Tháng này</button>
+              <button type="button" class="month-nav-btn" onclick="changeWorkMonthOffset(1)">Tháng sau ▶</button>
+            </div>
+          </div>
+          <div class="month-toolbar-pills">
+            <span class="month-pill-stat">Đơn trong tháng: <strong id="monthOrders">0</strong></span>
+            <span class="month-pill-stat">Doanh thu tháng: <strong id="monthRevenue">0 đ</strong></span>
+            <span class="month-pill-stat">Đã giao: <strong id="monthDelivered">0</strong></span>
+            <span class="month-pill-stat">Chưa thu tiền: <strong id="monthUnpaid">0 đ</strong></span>
+          </div>
         </div>
 
         <div class="finance-kpi-grid">
           <div class="finance-kpi positive">
-            <span>Giá trị đơn tháng</span>
+            <span>Giá trị đơn tháng đang chọn</span>
             <strong id="finMonthRevenue">0 đ</strong>
             <small id="finMonthRevenueMeta">Tháng 09/2026</small>
           </div>
@@ -3303,7 +3391,7 @@ html.has-cached-session #erpShell{display:flex!important}
             <small id="finMonthDebtMeta">0 đơn chưa thu</small>
           </div>
           <div class="finance-kpi">
-            <span>Số đơn trong tháng</span>
+            <span>Đơn tháng này</span>
             <strong id="finMonthOrders">0</strong>
             <small id="finMonthOrdersMeta">Giá trị TB: 0 đ</small>
           </div>
@@ -3317,13 +3405,6 @@ html.has-cached-session #erpShell{display:flex!important}
             <strong id="finAllDebt">0 đ</strong>
             <small id="finAllDebtMeta">0 khách còn nợ</small>
           </div>
-        </div>
-
-        <div class="metric-grid dashboard-month-metrics">
-          <div class="metric-card"><div class="metric-label">ĐƠN TRONG THÁNG</div><div class="metric-value" id="monthOrders">0</div></div>
-          <div class="metric-card"><div class="metric-label">DOANH THU THÁNG</div><div class="metric-value" id="monthRevenue">0 đ</div></div>
-          <div class="metric-card"><div class="metric-label">ĐÃ GIAO</div><div class="metric-value" id="monthDelivered">0</div></div>
-          <div class="metric-card"><div class="metric-label">CHƯA THU TIỀN</div><div class="metric-value" id="monthUnpaid">0 đ</div></div>
         </div>
 
         <div class="dashboard-alert-grid">
@@ -3352,14 +3433,16 @@ html.has-cached-session #erpShell{display:flex!important}
         <div class="panel action-orders-panel">
           <div class="panel-head">
             <div>
-              <h3>Đơn cần theo dõi</h3>
-              <div class="followup-caption"><span>Ưu tiên hiển thị GẤP, quá hạn, sắp giao và chưa thu tiền</span></div>
+              <h3>Đơn cần theo dõi & báo khách</h3>
+              <div class="followup-caption">
+                <span>Ưu tiên: GẤP → quá hạn → sắp giao → chưa thu tiền</span>
+              </div>
             </div>
             <button class="ghost-btn" onclick="navigate('orders')">Mở Đơn sản xuất</button>
           </div>
           <div class="panel-body" style="padding:0">
             <div class="action-orders-wrap">
-              <table class="action-orders-table dashboard-action-table">
+              <table class="action-orders-table">
                 <thead>
                   <tr>
                     <th>Ưu tiên</th>
@@ -3367,8 +3450,13 @@ html.has-cached-session #erpShell{display:flex!important}
                     <th>Khách hàng</th>
                     <th>Tiến độ</th>
                     <th>Giao dự kiến</th>
+                    <th>Tiền hàng</th>
+                    <th>Thiết kế</th>
+                    <th>Phí ship</th>
+                    <th>VAT</th>
                     <th>Tổng đơn</th>
-                    <th>Còn lại</th>
+                    <th>Đặt cọc</th>
+                    <th>Còn lại sau cọc</th>
                     <th>Thanh toán</th>
                     <th>Thao tác</th>
                   </tr>
@@ -3379,45 +3467,11 @@ html.has-cached-session #erpShell{display:flex!important}
           </div>
         </div>
 
-        <div class="panel cashflow-panel">
-          <div class="panel-head">
-            <h3>Dòng tiền tháng đang chọn</h3>
-            <span id="cashflowMonthCaption">Theo tháng làm việc</span>
-          </div>
-          <div class="panel-body">
-            <div class="cashflow-line">
-              <span>Đã thu</span>
-              <div class="cashflow-track"><div class="cashflow-fill collected" id="cashflowCollectedBar" style="width:0%"></div></div>
-              <strong id="cashflowCollectedValue">0 đ</strong>
-            </div>
-            <div class="cashflow-line">
-              <span>Công nợ</span>
-              <div class="cashflow-track"><div class="cashflow-fill debt" id="cashflowDebtBar" style="width:0%"></div></div>
-              <strong id="cashflowDebtValue">0 đ</strong>
-            </div>
-            <div class="cashflow-line">
-              <span>Thu tiền mặt</span>
-              <div class="cashflow-track"><div class="cashflow-fill cash" id="cashflowCashBar" style="width:0%"></div></div>
-              <strong id="cashflowCashValue">0 đ</strong>
-            </div>
-            <div class="cashflow-line">
-              <span>CK cá nhân</span>
-              <div class="cashflow-track"><div class="cashflow-fill personal" id="cashflowPersonalBar" style="width:0%"></div></div>
-              <strong id="cashflowPersonalValue">0 đ</strong>
-            </div>
-            <div class="cashflow-line">
-              <span>CK công ty</span>
-              <div class="cashflow-track"><div class="cashflow-fill company" id="cashflowCompanyBar" style="width:0%"></div></div>
-              <strong id="cashflowCompanyValue">0 đ</strong>
-            </div>
-          </div>
-        </div>
-
         <div class="finance-board">
           <div class="panel">
             <div class="panel-head">
               <h3>Giá trị đơn & dòng tiền theo tháng</h3>
-              <span>6 tháng gần nhất</span>
+              <span>6 tháng gần nhất theo dữ liệu đơn hàng</span>
             </div>
             <div class="panel-body finance-table-wrap">
               <table class="finance-table">
@@ -3440,7 +3494,7 @@ html.has-cached-session #erpShell{display:flex!important}
           <div class="panel">
             <div class="panel-head">
               <h3>Chỉ số điều hành</h3>
-              <span>Tháng đang chọn</span>
+              <span>Tập trung vào dòng tiền & hiệu suất</span>
             </div>
             <div class="panel-body">
               <div class="finance-highlight">
@@ -3462,12 +3516,15 @@ html.has-cached-session #erpShell{display:flex!important}
           </div>
         </div>
 
-        <div class="panel dashboard-month-orders-panel">
+        <div class="panel month-orders-panel" style="margin-top:16px">
           <div class="panel-head">
-            <h3>Đơn trong tháng đang chọn</h3>
-            <span>Tối đa 20 đơn mới nhất trong tháng</span>
+            <div>
+              <h3>Đơn hàng trong tháng</h3>
+              <span>Danh sách các đơn theo tháng làm việc đang chọn (<span id="monthStageCaption">09/2026</span>)</span>
+            </div>
+            <button class="ghost-btn" onclick="navigate('orders')">Mở Đơn sản xuất</button>
           </div>
-          <div class="panel-body">
+          <div class="panel-body" style="padding:0">
             <div id="monthOrderList" class="month-orders"></div>
           </div>
         </div>
@@ -3732,7 +3789,7 @@ html.has-cached-session #erpShell{display:flex!important}
       </section>
 
       <!-- ĐƠN SẢN XUẤT -->
-      <section class="app-page" id="page-orders">
+      <section class="app-page active" id="page-orders">
         <div class="page-title-row">
           <div>
             <h2>Đơn sản xuất</h2>
@@ -3944,52 +4001,6 @@ html.has-cached-session #erpShell{display:flex!important}
           </div>
         </div>
 
-        <div class="sheets-sync-card" id="googleSheetsSyncCard" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 style="margin:0">Đồng bộ Google Sheet (Lưu trữ & Báo cáo)</h3>
-            <span class="role-badge" id="googleSheetsAutoBadge" style="background:#e6f4ea;color:#137333;font-size:12px;padding:3px 8px;border-radius:6px">Tự động đẩy khi thao tác: BẬT</span>
-          </div>
-          <p style="margin-bottom:12px">Mỗi khi bạn lưu, sửa tiến độ hoặc xoá đơn sản xuất, hệ thống sẽ tự động cập nhật ngay lên Google Sheet. Dữ liệu luôn được lưu giữ an toàn song song ở Website và Google Sheet, khi xoá ở một trong 2 nơi thì dữ liệu mới bị xoá.</p>
-
-          <div style="background:#f8f9fa;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px">
-            <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#2d3748">Cấu hình kết nối Google Sheet (Apps Script Web App)</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
-              <div>
-                <label style="font-size:12px;color:#4a5568;display:block;margin-bottom:3px">Web App URL (https://script.google.com/macros/s/.../exec)</label>
-                <input type="text" id="sheetsWebAppUrl" placeholder="Dán Web App URL của Google Apps Script" style="width:100%;padding:7px 10px;font-size:13px;border:1px solid #cbd5e1;border-radius:6px">
-              </div>
-              <div>
-                <label style="font-size:12px;color:#4a5568;display:block;margin-bottom:3px">Sync Secret (Khóa bảo mật)</label>
-                <input type="password" id="sheetsSyncSecret" placeholder="Nhập Secret (để trống nếu không đổi)" style="width:100%;padding:7px 10px;font-size:13px;border:1px solid #cbd5e1;border-radius:6px">
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-              <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer">
-                <input type="checkbox" id="sheetsAutoSyncCheck" checked>
-                Tự động đồng bộ ngay khi lưu / sửa / xóa đơn sản xuất
-              </label>
-              <button class="btn btn-green" type="button" onclick="saveGoogleSheetsConfigUI()" style="padding:6px 14px;font-size:12px">LƯU CẤU HÌNH & KIỂM TRA</button>
-            </div>
-          </div>
-
-          <div class="sheets-sync-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-blue" type="button" onclick="syncTwoWayWithGoogleSheets()">🔄 ĐỒNG BỘ 2 CHIỀU VỚI SHEET</button>
-            <button class="btn btn-green" type="button" onclick="pushAllToGoogleSheets()">ĐẨY TOÀN BỘ LÊN SHEET</button>
-            <button class="ghost-btn" type="button" onclick="pullAllFromGoogleSheetsAdmin()">LẤY DỮ LIỆU TỪ SHEET</button>
-            <button class="ghost-btn" type="button" onclick="refreshGoogleSheetsStatus()">KIỂM TRA KẾT NỐI</button>
-          </div>
-          <div class="sheets-sync-status" id="googleSheetsSyncStatus" style="margin-top:10px">Chưa kiểm tra kết nối</div>
-        </div>
-
-        <div class="permission-note">
-          <b>Giám đốc:</b> toàn quyền •
-          <b>Kế toán:</b> tạo báo giá, đơn sản xuất, khách hàng, điều chỉnh giá •
-          <b>Nhân viên bán hàng:</b> tương tự Kế toán •
-          <b>Nhân viên thiết kế:</b> xử lý đơn sản xuất và khách hàng •
-          <b>Nhân viên in ấn:</b> đơn sản xuất và khách hàng •
-          <b>Lương & chấm công:</b> Giám đốc và Kế toán.
-        </div>
-
         <div class="account-grid">
           <div class="account-form">
             <h3 style="margin:0 0 12px;font-size:13px">Tạo tài khoản mới</h3>
@@ -4004,7 +4015,7 @@ html.has-cached-session #erpShell{display:flex!important}
               </div>
               <div>
                 <label class="label">Mật khẩu</label>
-                <input id="newAccountPassword" class="control" type="password" placeholder="Tối thiểu 4 ký tự">
+                <input id="newAccountPassword" class="control" type="password" placeholder="Tối thiểu 8 ký tự">
               </div>
               <div>
                 <label class="label">Vai trò</label>
@@ -4598,7 +4609,7 @@ const PRICE = {
 const PRODUCTS = [
   ["invoice1","In hoá đơn 1 màu"],
   ["invoiceMulti","In hoá đơn nhiều màu"],
-  ["menu2","In menu 2 mặt"],
+  ["menu2","In menu tờ / tấm"],
   ["standeeIndoor","In standee gấp gọn trong nhà"],
   ["standeeIron","In standee chân sắt ngoài trời"],
   ["standeeA","In standee chân chữ A ngoài trời"],
@@ -4845,53 +4856,9 @@ let salaryAdjustmentDraft=[];
 function normalizePhone(v){return String(v||"").replace(/\D/g,"")}
 function makeCustomerCode(id){return `KH-${String(id||Date.now()).slice(-6)}`}
 
-function upsertCustomerProfileFromOrder(order){
-  if(order?.crmSuppressed)return;
-  const ci=order.customerInfo||{name:order.customer||"Quý Khách Hàng"};
-  const profiles=getCustomerProfiles();
-  const phone=normalizePhone(ci.phone);
-  let p=profiles.find(x=>
-    (phone && normalizePhone(x.phone)===phone) ||
-    (!phone && ci.email && String(x.email||"").toLowerCase()===String(ci.email).toLowerCase()) ||
-    (!phone && !ci.email && String(x.name||"").trim().toLowerCase()===String(ci.name||order.customer||"").trim().toLowerCase())
-  );
+function upsertCustomerProfileFromOrder(order){ return HTXBusinessV30.resolveCustomer(order,getCustomerProfiles()); }
 
-  if(!p){
-    p={
-      id:Date.now()+Math.floor(Math.random()*1000),
-      code:"",
-      name:ci.name||order.customer||"Quý Khách Hàng",
-      company:ci.company||"",
-      address:ci.address||"",
-      phone:ci.phone||"",
-      email:ci.email||"",
-      cccd:ci.cccd||"",
-      taxCode:ci.taxCode||"",
-      tier:"Mới",
-      owner:order.preparedBy||currentUser?.name||"",
-      note:"",
-      createdAt:new Date().toLocaleString("vi-VN"),
-      updatedAt:new Date().toLocaleString("vi-VN")
-    };
-    p.code=makeCustomerCode(p.id);
-    profiles.push(p);
-  }else{
-    p.name=ci.name||p.name;
-    p.company=ci.company||p.company;
-    p.address=ci.address||p.address;
-    p.phone=ci.phone||p.phone;
-    p.email=ci.email||p.email;
-    p.cccd=ci.cccd||p.cccd;
-    p.taxCode=ci.taxCode||p.taxCode;
-    if(!p.owner)p.owner=order.preparedBy||currentUser?.name||"";
-    p.updatedAt=new Date().toLocaleString("vi-VN");
-  }
-  saveCustomerProfiles(profiles);
-}
-
-function syncProfilesFromOrders(){
-  getHistory().forEach(upsertCustomerProfileFromOrder);
-}
+function syncProfilesFromOrders(){ /* Read/render never creates customers. Server links on order save. */ }
 
 function getCustomerProfileByName(name){
   const orders=getHistory().filter(x=>(x.customer||"").trim()===String(name||"").trim());
@@ -4905,23 +4872,7 @@ function getCustomerProfileByName(name){
   );
 }
 
-function orderBelongsToCustomerProfile(order,p){
-  if(!order || !p)return false;
-  const ci=order.customerInfo||{};
-  const pPhone=normalizePhone(p.phone);
-  const oPhone=normalizePhone(ci.phone);
-  const pEmail=String(p.email||"").trim().toLowerCase();
-  const oEmail=String(ci.email||"").trim().toLowerCase();
-  const pTax=String(p.taxCode||"").trim().toLowerCase();
-  const oTax=String(ci.taxCode||"").trim().toLowerCase();
-  const pName=String(p.name||"").trim().toLowerCase();
-  const oName=String(order.customer||ci.name||"").trim().toLowerCase();
-
-  if(pPhone && oPhone && pPhone===oPhone)return true;
-  if(pEmail && oEmail && pEmail===oEmail)return true;
-  if(pTax && oTax && pTax===oTax)return true;
-  return !!(pName && oName && pName===oName);
-}
+function orderBelongsToCustomerProfile(order,p){ const linked=HTXBusinessV30.resolveCustomer(order,getCustomerProfiles()); return !!linked&&String(linked.id)===String(p.id); }
 
 function deleteCustomerOnly(id){
   if(!hasPermission("deleteCustomer")){
@@ -5160,6 +5111,20 @@ function setWorkMonth(v){
   renderWorkMonth();
   renderDashboard();
 }
+function changeWorkMonthOffset(delta){
+  const cur=getWorkMonth()||"2026-09";
+  const [yy,mm]=cur.split("-").map(Number);
+  const d=new Date(yy,mm-1+delta,1);
+  const nextMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  setWorkMonth(nextMonth);
+}
+function setWorkMonthCurrent(){
+  const now=new Date();
+  const cur=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  setWorkMonth(cur);
+}
+window.changeWorkMonthOffset=changeWorkMonthOffset;
+window.setWorkMonthCurrent=setWorkMonthCurrent;
 function monthKeyFromOrder(x){
   const id=Number(x.id||0);
   if(id){
@@ -5272,35 +5237,6 @@ function getUsers(){
 function saveUsers(users){localStorage.setItem(AUTH_KEY,JSON.stringify(users))}
 function passwordHash(username,password){return simpleHash(`${String(username).toLowerCase()}|HTX|${password}`)}
 
-function ensureDefaultDirector(){
-  const migrationKey="htx_default_director_v14_done";
-  if(localStorage.getItem(migrationKey)==="1")return;
-
-  const users=getUsers();
-  let user=users.find(u=>String(u.username||"").toLowerCase()==="giamdoc");
-
-  if(user){
-    user.name=user.name||"Giám đốc";
-    user.username="giamdoc";
-    user.passwordHash=passwordHash("giamdoc","123456");
-    user.role="director";
-    user.active=true;
-    user.updatedAt="Thiết lập mặc định V14";
-  }else{
-    users.unshift({
-      id:202609190001,
-      name:"Giám đốc",
-      username:"giamdoc",
-      passwordHash:passwordHash("giamdoc","123456"),
-      role:"director",
-      active:true,
-      createdAt:"Tài khoản mặc định V14"
-    });
-  }
-
-  saveUsers(users);
-  localStorage.setItem(migrationKey,"1");
-}
 function roleLabel(role){return ROLE_LABELS[role]||role||"Không xác định"}
 function hasPermission(permission){
   if(!currentUser)return false;
@@ -5368,51 +5304,12 @@ function showAuthMessage(msg,type="error"){
 }
 
 function showLogin(){
-  if(currentUser)navigate(hasPagePermission("dashboard")?"dashboard":"orders",true);
+  lockApplication();
+  clearPrivateCache();
+  currentUser=null;
+  try{window.HTXRealtime?.stopListeners?.()}catch{}
+  location.replace('/');
 }
-
-function showFirstAccountForm(){
-  const users=getUsers();
-  if(users.length){
-    showAuthMessage("Chỉ Giám đốc đang đăng nhập mới được tạo thêm tài khoản. Vui lòng đăng nhập trước.");
-    return;
-  }
-  $("loginForm").style.display="none";
-  $("firstAccountForm").style.display="block";
-  $("authTitle").textContent="Tạo tài khoản đầu tiên";
-  $("authDesc").textContent="Tài khoản đầu tiên được thiết lập là Giám đốc và có toàn quyền.";
-  showAuthMessage("");
-}
-
-function createFirstAccount(){
-  if(getUsers().length){
-    showAuthMessage("Hệ thống đã có tài khoản. Vui lòng đăng nhập.");
-    return;
-  }
-  const name=$("firstFullName").value.trim()||"Giám đốc";
-  const username=$("firstUsername").value.trim().toLowerCase();
-  const password=$("firstPassword").value;
-  if(username.length<3){showAuthMessage("Tên đăng nhập cần ít nhất 3 ký tự.");return}
-  if(password.length<4){showAuthMessage("Mật khẩu cần ít nhất 4 ký tự.");return}
-
-  const user={
-    id:Date.now(),
-    name,
-    username,
-    passwordHash:passwordHash(username,password),
-    role:"director",
-    active:true,
-    createdAt:new Date().toLocaleString("vi-VN")
-  };
-  saveUsers([user]);
-  showAuthMessage("Đã tạo tài khoản Giám đốc. Bạn có thể đăng nhập ngay.","ok");
-  $("loginUsername").value=username;
-  $("firstPassword").value="";
-  $("loginForm").style.display="block";
-  $("firstAccountForm").style.display="none";
-  $("authTitle").textContent="Đăng nhập";
-}
-
 
 async function getDatabaseHealth(){
   try{
@@ -5486,83 +5383,93 @@ window.addEventListener("offline",()=>{
   setCloudStatus("Mất mạng - chờ đồng bộ","offline");
 });
 
-async function login(){
-  const username=$("loginUsername").value.trim().toLowerCase();
-  const password=$("loginPassword").value;
-  if(!username || !password){
-    showAuthMessage("Vui lòng nhập tài khoản và mật khẩu.");
-    return;
+let sessionCheckTimer = null;
+function clearPrivateCache() {
+  cloudSyncReady = false;
+  for (const timer of cloudSyncTimers.values()) clearTimeout(timer);
+  for (const timer of realtimeDeltaTimers.values()) clearTimeout(timer);
+  cloudSyncTimers.clear(); realtimeDeltaTimers.clear(); realtimeDeltaPending.clear();
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith('htx_')) __nativeRemoveItem.call(localStorage, key);
   }
-  showAuthMessage("Đang kết nối cơ sở dữ liệu...","ok");
-  try{
-    const data=await backendLogin(username,password);
-    currentUser={...data.user};
-    __nativeSetItem.call(localStorage,SESSION_KEY,String(data.user.id));
-    $("loginPassword").value="";
-    await retryPendingRealtimeWrites();
+}
+function lockApplication() {
+  cloudSyncReady = false;
+  document.documentElement.classList.remove('has-cached-session');
+  $('erpShell')?.classList.add('auth-locked');
+  $('authGate')?.classList.remove('hidden');
+  if ($('erpShell')) $('erpShell').style.display = 'none';
+  if ($('authGate')) $('authGate').style.display = 'grid';
+}
+async function login() { location.replace('/'); }
+async function restoreSession() {
+  lockApplication();
+  clearPrivateCache();
+  currentUser = null;
+  try {
+    const data = await backendMe();
+    if (!data?.user?.loginAllowed) { showLogin(); return; }
+    if (data.user.mustChangePassword) { location.replace('/?change=1'); return; }
+    currentUser = data.user;
     await hydrateFromBackend();
-    await startRealtime(data.firebaseToken,data.user);
+    __nativeSetItem.call(localStorage, SESSION_KEY, String(currentUser.id));
     enterApp();
-  }catch(err){
-    console.error("Login/database error:",err);
-    const health=await getDatabaseHealth();
-    const dbError=health?.database?.error;
-    const missing=health?.database?.missing;
-    setCloudStatus("Database: chưa kết nối","offline");
-    if(dbError || (Array.isArray(missing)&&missing.length)){
-      showAuthMessage("Cơ sở dữ liệu chưa kết nối. "+(dbError||"")+(Array.isArray(missing)&&missing.length?(" Thiếu: "+missing.join(", ")):""));
-      return;
+    if (data.firebaseToken) void startRealtime(data.firebaseToken, currentUser);
+    if (sessionCheckTimer) clearInterval(sessionCheckTimer);
+    sessionCheckTimer = setInterval(checkActiveSession, 30000);
+  } catch (err) {
+    console.warn('Session verification failed:', err.message);
+    showLogin();
+  }
+}
+async function checkActiveSession() {
+  if (!currentUser) return;
+  try {
+    const response = await fetch('/api/auth/me?light=1', { credentials: 'same-origin', cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok || !data.user?.loginAllowed) { showLogin(); return; }
+    if (data.user.mustChangePassword) { location.replace('/?change=1'); return; }
+    if (currentUser.role !== data.user.role) {
+      currentUser = data.user;
+      await hydrateFromBackend();
+      enterApp();
     }
-    showAuthMessage(err.message||"Không đăng nhập được.");
+  } catch { setCloudStatus('Chưa kiểm tra được phiên — kiểm tra mạng', 'offline'); }
+}
+window.addEventListener('focus', () => { if (currentUser) void checkActiveSession(); });
+window.addEventListener('pageshow', event => { if (event.persisted) void restoreSession(); });
+window.addEventListener('storage', event => {
+  if (event.key === SESSION_KEY && !event.newValue && currentUser) showLogin();
+});
+async function logout() {
+  lockApplication();
+  if (sessionCheckTimer) clearInterval(sessionCheckTimer);
+  try { await window.HTXRealtime?.stop?.(); } catch {}
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  } finally {
+    clearPrivateCache(); currentUser = null; location.replace('/');
   }
 }
-
-async function restoreSession(){
-  // TẠM THỜI: bỏ màn hình đăng nhập, tự vào bằng quyền Giám đốc.
-  if($("authGate"))$("authGate").style.display="none";
-  if($("erpShell"))$("erpShell").classList.remove("auth-locked");
-
-  const fallbackUser={
-    id:202609190001,
-    name:"Giám đốc",
-    username:"giamdoc",
-    role:"director",
-    active:true
-  };
-
-  currentUser={...fallbackUser};
-  __nativeSetItem.call(localStorage,SESSION_KEY,String(fallbackUser.id));
-  enterApp();
-
-  try{
-    const data=await backendTemporarySession();
-    if(data?.user)currentUser={...data.user};
-    await retryPendingRealtimeWrites();
-    await hydrateFromBackend();
-    if(data?.firebaseToken)await startRealtime(data.firebaseToken,currentUser);
-    enterApp();
-  }catch(err){
-    console.warn("Phiên tạm / database chưa sẵn sàng:",err);
-    setCloudStatus("Database: chưa kết nối","offline");
-  }
-}
-
-async function logout(){
-  showToast("Ứng dụng hiện mở trực tiếp, không dùng màn hình đăng nhập.");
-  navigate(hasPagePermission("dashboard")?"dashboard":"orders",true);
-}
-
-function enterApp(){
-  if(!currentUser)return;
-  if($("authGate"))$("authGate").classList.add("hidden");
-  if($("erpShell"))$("erpShell").classList.remove("auth-locked");
-  if($("currentUserName"))$("currentUserName").textContent=currentUser.name||currentUser.username||"Người dùng";
-  if($("currentUserRole"))$("currentUserRole").textContent=roleLabel(currentUser.role);
-  if($("userAvatar"))$("userAvatar").textContent=(currentUser.name||currentUser.username||"U").charAt(0).toUpperCase();
+function enterApp() {
+  if (!currentUser?.loginAllowed || currentUser.mustChangePassword) { showLogin(); return; }
+  $('authGate')?.classList.add('hidden');
+  if ($('authGate')) $('authGate').style.display = 'none';
+  $('erpShell')?.classList.remove('auth-locked');
+  if ($('erpShell')) $('erpShell').style.removeProperty('display');
+  $('currentUserName').textContent = currentUser.name || currentUser.username;
+  $('currentUserRole').textContent = roleLabel(currentUser.role);
+  $('userAvatar').textContent = (currentUser.name || currentUser.username || 'U').charAt(0).toUpperCase();
+  if ($('logoutBtn')) $('logoutBtn').style.display = '';
   applyPermissions();
   refreshDesignerControls();
-  const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
-  navigate(hasPagePermission("dashboard")?"dashboard":(allowed[0]||"orders"),true);
+  renderConfigurator(); renderQuote(); renderHistory(); renderDashboard(); renderWorkMonth();
+  renderCustomers(); renderPricebook(); renderInventory(); renderPayroll(); renderAccounts();
+  const requested = location.hash.replace(/^#/, '').trim();
+  const pages = ['orders','quote','customers','dashboard','pricebook','inventory','payroll','accounts'];
+  const page = pages.includes(requested) && hasPagePermission(requested) ? requested : pages.find(hasPagePermission);
+  if (!page) { showLogin(); return; }
+  navigate(page, true);
 }
 
 function applyPermissions(){
@@ -5586,131 +5493,92 @@ function applyPermissions(){
   applyMobileNavPermissions();
 }
 
-function createAccount(){
-  if(!hasPermission("accounts")){showToast("Bạn không có quyền tạo tài khoản.");return}
-  const name=$("newAccountName").value.trim();
-  const username=$("newAccountUsername").value.trim().toLowerCase();
-  const password=$("newAccountPassword").value;
-  const role=$("newAccountRole").value;
-
-  if(!name){showToast("Vui lòng nhập họ tên.");return}
-  if(username.length<3){showToast("Tên đăng nhập cần ít nhất 3 ký tự.");return}
-  if(password.length<4){showToast("Mật khẩu cần ít nhất 4 ký tự.");return}
-
-  const users=getUsers();
-  if(users.some(u=>u.username===username)){showToast("Tên đăng nhập đã tồn tại.");return}
-
-  users.push({
-    id:Date.now(),
-    name,
-    username,
-    passwordHash:passwordHash(username,password),
-    role,
-    active:true,
-    createdAt:new Date().toLocaleString("vi-VN")
+async function accountRequest(method, id, body = {}) {
+  if (currentUser?.role !== 'director') throw new Error('Chỉ Giám đốc được quản lý tài khoản.');
+  const response = await fetch('/api/admin/users' + (id === null ? '' : '/' + encodeURIComponent(id)), {
+    method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
-  saveUsers(users);
-  $("newAccountName").value="";
-  $("newAccountUsername").value="";
-  $("newAccountPassword").value="";
-  renderAccounts();
-  refreshDesignerControls();
-  renderHistory();
-  showToast("Đã tạo tài khoản mới.");
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401) { showLogin(); throw new Error('Vui lòng đăng nhập lại.'); }
+  if (!response.ok) throw new Error(data.error || 'Không lưu được tài khoản.');
+  await hydrateFromBackend();
+  renderAccounts(); refreshDesignerControls(); renderHistory();
+  return data;
 }
-
-function renderAccounts(){
-  const body=$("accountsBody");
-  if(!body)return;
-  if(!hasPermission("accounts")){
-    body.innerHTML=`<tr><td colspan="5"><div class="empty-state"><strong>Không có quyền truy cập</strong>Chỉ Giám đốc được quản lý tài khoản.</div></td></tr>`;
-    return;
+async function createAccount() {
+  if (currentUser?.role !== 'director') { showToast('Chỉ Giám đốc được tạo tài khoản.'); return; }
+  const input = { name: $('newAccountName').value.trim(), username: $('newAccountUsername').value.trim().toLowerCase(), password: $('newAccountPassword').value, role: $('newAccountRole').value };
+  if (!input.name || input.username.length < 3 || input.password.length < 8) {
+    showToast('Nhập họ tên, tên đăng nhập ít nhất 3 ký tự và mật khẩu ít nhất 8 ký tự.'); return;
   }
-
-  const users=getUsers();
-  body.innerHTML=users.map(u=>{
-    const cls=u.role==="director"?"director":(u.role==="printing"?"printing":(u.role==="designer"?"designer":""));
-    const isCurrent=Number(u.id)===Number(currentUser?.id);
-    return `<tr>
-      <td><b>${esc(u.name||"")}</b>${isCurrent?`<div class="muted" style="font-size:8px;margin-top:3px">Tài khoản đang đăng nhập</div>`:""}</td>
-      <td>${esc(u.username)}</td>
-      <td><span class="role-badge ${cls}">${esc(roleLabel(u.role))}</span></td>
-      <td>${u.active===false?'<span class="danger-text">Đang khóa</span>':'Đang hoạt động'}</td>
-      <td>
-        <div class="account-actions">
-          <button class="ghost-btn" type="button" data-user-action="password" data-user-id="${u.id}">Đổi mật khẩu</button>
-          ${!isCurrent?`<button class="ghost-btn" type="button" data-user-action="toggle" data-user-id="${u.id}">${u.active===false?"Mở khóa":"Khóa"}</button>`:""}
-          ${!isCurrent?`<button class="ghost-btn danger-text" type="button" data-user-action="delete" data-user-id="${u.id}">Xóa</button>`:""}
-        </div>
-      </td>
-    </tr>`;
-  }).join("");
+  $('createAccountBtn').disabled = true;
+  try {
+    await accountRequest('POST', null, input);
+    $('newAccountName').value = ''; $('newAccountUsername').value = ''; $('newAccountPassword').value = '';
+    showToast('Đã lưu tài khoản và phân quyền trên máy chủ.');
+  } catch (err) { alert(err.message); }
+  finally { $('createAccountBtn').disabled = false; }
 }
-
-function handleAccountAction(e){
-  const btn=e.target.closest("[data-user-action]");
-  if(!btn || !hasPermission("accounts"))return;
-  const id=Number(btn.dataset.userId);
-  const action=btn.dataset.userAction;
-  if(action==="password")resetUserPassword(id);
-  else if(action==="toggle")toggleUserActive(id);
-  else if(action==="delete")deleteUser(id);
-}
-
-function resetUserPassword(id){
-  if(!hasPermission("accounts"))return;
-  const users=getUsers();
-  const u=users.find(x=>Number(x.id)===Number(id));
-  if(!u)return;
-  const p=prompt(`Nhập mật khẩu mới cho ${u.name || u.username} (tối thiểu 4 ký tự):`);
-  if(p===null)return;
-  if(p.length<4){alert("Mật khẩu cần ít nhất 4 ký tự.");return}
-  u.passwordHash=passwordHash(u.username,p);
-  saveUsers(users);
-  showToast("Đã đổi mật khẩu.");
-}
-
-function toggleUserActive(id){
-  if(!hasPermission("accounts"))return;
-  const users=getUsers();
-  const u=users.find(x=>Number(x.id)===Number(id));
-  if(!u)return;
-  u.active=u.active===false?true:false;
-  saveUsers(users);
-  renderAccounts();
-  refreshDesignerControls();
-  renderHistory();
-  showToast(u.active?"Đã mở khóa tài khoản.":"Đã khóa tài khoản.");
-}
-
-function deleteUser(id){
-  if(!hasPermission("accounts")){showToast("Bạn không có quyền xóa tài khoản.");return}
-  const users=getUsers();
-  const u=users.find(x=>Number(x.id)===Number(id));
-  if(!u){showToast("Không tìm thấy tài khoản.");return}
-
-  if(Number(u.id)===Number(currentUser?.id)){
-    showToast("Không thể xóa tài khoản đang đăng nhập.");
-    return;
+function renderAccounts() {
+  const body = $('accountsBody');
+  if (!body) return;
+  if (currentUser?.role !== 'director') {
+    body.innerHTML = '<tr><td colspan="5">Chỉ Giám đốc được quản lý tài khoản.</td></tr>'; return;
   }
-
-  if(u.role==="director"){
-    const directors=users.filter(x=>x.role==="director");
-    if(directors.length<=1){
-      showToast("Phải giữ lại ít nhất 1 tài khoản Giám đốc.");
-      return;
+  body.innerHTML = getUsers().map(user => {
+    const own = String(user.id) === String(currentUser.id);
+    const status = user.loginAllowed ? 'Đang hoạt động' : user.active === false ? 'Đang khóa' : 'Chờ Giám đốc cấp quyền';
+    const button = (action, label) => `<button class="ghost-btn" type="button" data-user-action="${action}" data-user-id="${esc(user.id)}">${label}</button>`;
+    return `<tr><td><b>${esc(user.name || '')}</b>${own ? '<div class="muted">Tài khoản đang đăng nhập</div>' : ''}</td><td>${esc(user.username)}</td><td><span class="role-badge">${esc(roleLabel(user.role))}</span></td><td>${status}</td><td><div class="account-actions">${button('password','Đổi mật khẩu')}${own ? '' : button('role','Phân quyền') + button('toggle', user.loginAllowed ? 'Khóa' : 'Cấp quyền / Mở khóa') + button('delete','Xóa')}</div></td></tr>`;
+  }).join('');
+}
+async function handleAccountAction(event) {
+  const button = event.target.closest('[data-user-action]');
+  if (!button || currentUser?.role !== 'director') return;
+  button.disabled = true;
+  try {
+    const id = button.dataset.userId;
+    if (button.dataset.userAction === 'password') await resetUserPassword(id);
+    else if (button.dataset.userAction === 'toggle') await toggleUserActive(id);
+    else if (button.dataset.userAction === 'delete') await deleteUser(id);
+    else if (button.dataset.userAction === 'role') {
+      const user = getUsers().find(item => String(item.id) === String(id));
+      if (!user) return;
+      const role = prompt('Nhập mã phân quyền: director (Giám đốc), accounting (Kế toán), sales (Kinh doanh), designer (Thiết kế), printing (In ấn):', user.role);
+      if (role === null) return;
+      if (!['director','accounting','sales','designer','printing'].includes(role.trim())) throw new Error('Phân quyền không hợp lệ.');
+      await accountRequest('PATCH', id, { role: role.trim() });
+      showToast('Đã cập nhật phân quyền. Nhân viên cần đăng nhập lại.');
     }
+  } catch (err) { alert(err.message); }
+  finally { button.disabled = false; }
+}
+async function resetUserPassword(id) {
+  const user = getUsers().find(item => String(item.id) === String(id));
+  if (!user || currentUser?.role !== 'director') return;
+  const password = prompt(`Nhập mật khẩu mới cho ${user.name || user.username} (ít nhất 8 ký tự):`);
+  if (password === null) return;
+  await accountRequest('PATCH', id, { password });
+  showToast('Đã đổi mật khẩu trên máy chủ.');
+}
+async function toggleUserActive(id) {
+  const user = getUsers().find(item => String(item.id) === String(id));
+  if (!user || currentUser?.role !== 'director') return;
+  const input = { active: !user.loginAllowed };
+  if (!user.loginAllowed) {
+    const password = prompt(`Đặt mật khẩu mới cho ${user.name || user.username} trước khi cấp lại quyền (ít nhất 8 ký tự):`);
+    if (password === null) return;
+    input.password = password;
   }
-
-  const ok=window.confirm(`Xóa tài khoản "${u.username}" - ${u.name||""}?\n\nThao tác này không thể hoàn tác.`);
-  if(!ok)return;
-
-  const next=users.filter(x=>Number(x.id)!==Number(id));
-  saveUsers(next);
-  renderAccounts();
-  refreshDesignerControls();
-  renderHistory();
-  showToast(`Đã xóa tài khoản ${u.username}.`);
+  await accountRequest('PATCH', id, input);
+  showToast(input.active ? 'Đã cấp quyền đăng nhập.' : 'Đã khóa tài khoản và vô hiệu hóa phiên cũ.');
+}
+async function deleteUser(id) {
+  if (currentUser?.role !== 'director') return;
+  const user = getUsers().find(item => String(item.id) === String(id));
+  if (!user || !confirm(`Xóa tài khoản ${user.username}?`)) return;
+  await accountRequest('DELETE', id);
+  showToast('Đã xóa tài khoản trên máy chủ.');
 }
 
 function openPriceAdjust(productKey){
@@ -5970,7 +5838,7 @@ function queuePendingOperation(op){
   try{q=JSON.parse(localStorage.getItem(PENDING_QUEUE_KEY)||"[]")}catch{}
   if(!Array.isArray(q))q=[];
   q.push({...op,queuedAt:Date.now()});
-  if(q.length>300)q=q.slice(-300);
+  // Do not silently discard pending writes.
   __nativeSetItem.call(localStorage,PENDING_QUEUE_KEY,JSON.stringify(q));
 }
 
@@ -5993,6 +5861,8 @@ async function sendEntityOperation(op,{queueOnFailure=true}={}){
       alert("Dữ liệu vừa được một nhân viên khác thay đổi. Phần mềm đã tải phiên bản mới nhất; vui lòng kiểm tra và thao tác lại.");
       return false;
     }
+    if(res.status===401){showLogin();return false;}
+    if(res.status===403){showToast(data.error||'Bạn không có quyền thực hiện thao tác này.');return false;}
     if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);
     if(data.ok && data.item && op.type!=="delete"){
       try{
@@ -6052,6 +5922,7 @@ async function pushCollectionDelta(key,oldRaw,newRaw){
 }
 
 function scheduleCollectionDelta(key,oldRaw,newRaw){
+  if(!cloudSyncReady || cloudHydrating || !currentUser)return;
   const existing=realtimeDeltaPending.get(key);
   if(existing){
     existing.newRaw=newRaw;
@@ -6069,6 +5940,7 @@ function scheduleCollectionDelta(key,oldRaw,newRaw){
 }
 
 async function retryPendingRealtimeWrites(){
+  if(!cloudSyncReady || !currentUser)return;
   let q=[];
   try{q=JSON.parse(localStorage.getItem(PENDING_QUEUE_KEY)||"[]")}catch{}
   if(!Array.isArray(q) || !q.length)return;
@@ -6096,6 +5968,7 @@ async function cloudPushKey(key){
     if(res.status===401){
       cloudSyncReady=false;
       setCloudStatus("Cloud: hết phiên","offline");
+      showLogin();
       return;
     }
     if(!res.ok){
@@ -6122,7 +5995,7 @@ function scheduleCloudPush(key){
 Storage.prototype.setItem=function(key,value){
   const oldRaw=this===localStorage?localStorage.getItem(String(key)):null;
   const result=__nativeSetItem.call(this,key,value);
-  if(this===localStorage && !window.__HTXRealtimeHydrating){
+  if(this===localStorage && cloudSyncReady && !cloudHydrating && currentUser && !window.__HTXRealtimeHydrating){
     const k=String(key);
     if(REALTIME_COLLECTION_KEYS.has(k)){
       scheduleCollectionDelta(k,oldRaw,String(value));
@@ -6137,7 +6010,7 @@ Storage.prototype.removeItem=function(key){
   const k=String(key);
   const oldRaw=this===localStorage?localStorage.getItem(k):null;
   const result=__nativeRemoveItem.call(this,key);
-  if(this===localStorage && !window.__HTXRealtimeHydrating){
+  if(this===localStorage && cloudSyncReady && !cloudHydrating && currentUser && !window.__HTXRealtimeHydrating){
     if(REALTIME_COLLECTION_KEYS.has(k)){
       scheduleCollectionDelta(k,oldRaw,"[]");
     }else if(CLOUD_SYNC_KEYS.includes(k)){
@@ -6158,7 +6031,7 @@ async function hydrateFromBackend(){
   cloudHydrating=true;
   try{
     for(const key of CLOUD_SYNC_KEYS){
-      if(!(key in payload.state))continue;
+      if(!(key in payload.state)){__nativeRemoveItem.call(localStorage,key);continue;}
       const value=payload.state[key];
       if(value===undefined)continue;
       if(value===null)__nativeRemoveItem.call(localStorage,key);
@@ -6170,17 +6043,6 @@ async function hydrateFromBackend(){
   cloudSyncReady=true;
   setCloudStatus("Database: đã kết nối","ok");
   $("cloudSyncStatus")?.classList.add("realtime");
-}
-
-async function backendTemporarySession(){
-  const res=await fetch("/api/auth/temporary",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    credentials:"same-origin"
-  });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok)throw new Error(data.error||"Không tạo được phiên tạm.");
-  return data;
 }
 
 async function backendLogin(username,password){
@@ -6208,20 +6070,6 @@ async function backendLogout(){
     await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});
   }catch{}
 }
-
-function localLoginFallback(username,password){
-  const user=getUsers().find(u=>u.username===username);
-  if(!user || user.passwordHash!==passwordHash(username,password)){
-    showAuthMessage("Tên đăng nhập hoặc mật khẩu không đúng.");
-    return null;
-  }
-  if(user.active===false){
-    showAuthMessage("Tài khoản này đang bị khóa.");
-    return null;
-  }
-  return user;
-}
-
 
 function ensureAppScrollUnlocked(){
   // Chỉ sidebar/modal tự quản lý trạng thái riêng; trang chính luôn phải cuộn được.
@@ -6307,6 +6155,11 @@ function init(){
   });
   window.addEventListener("resize",()=>{if(window.innerWidth>840)closeMobileSidebar()});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMobileSidebar()});
+  if($("logoutBtn")){
+    $("logoutBtn").style.display="";
+    $("logoutBtn").addEventListener("click",logout);
+  }
+
   $("orderSearch").addEventListener("input",renderHistory);
   $("orderStatusFilter").addEventListener("change",renderHistory);
   $("orderPaidFilter").addEventListener("change",renderHistory);
@@ -6317,9 +6170,7 @@ function init(){
   $("priceSearch").addEventListener("input",renderPricebook);
   $("inventorySearch").addEventListener("input",renderInventory);
 
-  $("globalWorkMonth").value=getWorkMonth();
   $("workMonthPicker").value=getWorkMonth();
-  $("globalWorkMonth").addEventListener("change",e=>setWorkMonth(e.target.value));
   $("workMonthPicker").addEventListener("change",e=>setWorkMonth(e.target.value));
 
   $("addCustomerBtn").addEventListener("click",()=>openCustomerProfileModal());
@@ -6348,12 +6199,18 @@ function init(){
     el.addEventListener("change",updatePayrollPreview);
   });
 
+
+
+
+
+
+
   $("priceAdjustPercent").addEventListener("input",updatePriceAdjustPreview);
   $("savePriceAdjustBtn").addEventListener("click",savePriceAdjustment);
   $("resetPriceAdjustBtn").addEventListener("click",resetPriceAdjustment);
 
   const now=new Date();
-  $("topDate").textContent=now.toLocaleDateString("vi-VN",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"});
+
 
   refreshDesignerControls();
   renderConfigurator();
@@ -6368,11 +6225,13 @@ function init(){
   renderPayroll();
   renderAccounts();
 
-  ensureDefaultDirector();
+
   updateOrderEditUI();
   updateItemEditUI();
   setupResponsiveObserver();
+  setupPwa();
   setupScrollRecovery();
+
   restoreSession();
 }
 
@@ -6928,6 +6787,8 @@ function addCurrentItem(){
     unitPrice:r.unitPrice,
     total:r.total,
     details:r.details,
+    printSides:r.printSides||"",
+    pricingInput:r.pricingInput||null,
     note:$("itemNote").value.trim()
   };
 
@@ -6988,8 +6849,8 @@ function renderQuote(){
       <td class="center">${i+1}</td>
       <td><div class="item-name">${esc(x.name)}</div><div class="item-spec">${esc(spec)}</div>${x.note?`<div class="item-spec"><b>Ghi chú:</b> ${esc(x.note)}</div>`:""}</td>
       <td class="center">${esc(x.unit)}</td>
-      <td class="center">${fmt(x.qty)}</td>
-      <td class="money">${money(x.unitPrice)}</td>
+      <td class="center">${formatQuantityV29(x.qty)}</td>
+      <td class="money">${formatUnitPriceV29(x.unitPrice)}</td>
       <td class="money"><b>${money(x.total)}</b></td>
       <td class="center">
         <div class="quote-item-actions">
@@ -7050,7 +6911,7 @@ let lastOrderPersistPromise=Promise.resolve(true);
 function writeHistory(list){
   const key="htx_auto_quotes_v5";
   const oldRaw=localStorage.getItem(key)||"[]";
-  const newRaw=JSON.stringify(list.slice(0,300));
+  const newRaw=JSON.stringify(list);
   __nativeSetItem.call(localStorage,key,newRaw);
   if(isHostedOnline() && !cloudHydrating && !window.__HTXRealtimeHydrating){
     lastOrderPersistPromise=pushCollectionDelta(key,oldRaw,newRaw).then(ok=>ok!==false).catch(err=>{console.error("Persist order failed:",err);return false});
@@ -7122,6 +6983,8 @@ function saveQuote(){
       updatedBy:currentUser?.name||currentUser?.username||"",
       vatEnabled:$("vatEnabled").checked,
       designFee:t.designFee,
+      designProductCount:designCountForSaveV30(),
+      customerId:selectedCustomerIdV30||old.customerId||null,
       shipFee:t.shipFee,
       deposit:t.deposit,
       paymentMethod:$("paymentMethod")?.value||"",
@@ -7144,7 +7007,7 @@ function saveQuote(){
     }
 
     const reason=$("orderAdjustmentNote")?.value.trim()||"Điều chỉnh đơn hàng";
-    const revisions=Array.isArray(old.revisions)?old.revisions.slice(0,29):[];
+    const revisions=Array.isArray(old.revisions)?old.revisions.slice():[];
     revisions.unshift({
       at:q.updatedAt,
       by:q.updatedBy,
@@ -7194,6 +7057,7 @@ function saveQuote(){
     createdAt:new Date().toLocaleString("vi-VN"),
     vatEnabled:$("vatEnabled").checked,
     designFee:t.designFee,
+    designProductCount:designCountForSaveV30(),
     shipFee:t.shipFee,
     deposit:t.deposit,
     paymentMethod:$("paymentMethod")?.value||"",
@@ -7204,6 +7068,8 @@ function saveQuote(){
 
   list.unshift({
     id:q.id,
+    customerId:selectedCustomerIdV30||null,
+    designProductCount:q.designProductCount,
     orderCode:q.orderCode,
     customer:q.customer,
     customerInfo:q.customerInfo,
@@ -7216,6 +7082,7 @@ function saveQuote(){
     count:q.items.length,
     total:t.grand,
     designFee:t.designFee,
+    designProductCount:designCountForSaveV30(),
     shipFee:t.shipFee,
     deposit:q.deposit,
     paymentMethod:q.paymentMethod||"",
@@ -7311,7 +7178,13 @@ function renderHistory(){
     if(designerFilter==="unassigned" && x.designerId)return false;
     if(designerFilter && designerFilter!=="unassigned" && Number(x.designerId)!==Number(designerFilter))return false;
     return true;
-  }).sort((a,b)=>Number(b.id||0)-Number(a.id||0));
+  }).sort((a,b)=>{
+    if(!!a.urgent!==!!b.urgent)return a.urgent?-1:1;
+    const ad=a.expectedDelivery?new Date(a.expectedDelivery).getTime():Infinity;
+    const bd=b.expectedDelivery?new Date(b.expectedDelivery).getTime():Infinity;
+    if(ad!==bd)return ad-bd;
+    return Number(b.id||0)-Number(a.id||0);
+  });
 
   if(!list.length){
     box.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><strong>Không có đơn phù hợp</strong>Thử thay đổi bộ lọc hoặc tạo một báo giá mới.</div>`;
@@ -7327,64 +7200,61 @@ function renderHistory(){
     }).join("");
 
     const dClass=deliveryClass(x.expectedDelivery,currentStatus);
-    const priorityColumn=`<div class="order-priority-column ${x.urgent?"urgent":"normal"}">${x.urgent?"GẤP":"MỚI"}</div>`;
-    return `<div class="order-card order-card-with-priority ${x.urgent?"urgent-order":""}">
-      ${priorityColumn}
-      <div class="order-card-main">
-        <div class="order-head">
-          <div>
-            <span class="order-code">${esc(x.orderCode||makeOrderCode(x.id))}</span>
-            <strong>${esc(x.customer||"Quý Khách Hàng")}</strong>
-            <span class="muted">${esc(x.createdAt||"")} • ${Number(x.count||x.items?.length||0)} hạng mục</span>
-            <div class="order-head-meta">
-              ${x.expectedDelivery?`<span class="delivery-badge ${dClass}">Giao dự kiến: ${esc(formatDelivery(x.expectedDelivery))}</span>`:""}
-              ${x.designerName?`<span class="designer-badge">✦ Thiết kế: ${esc(x.designerName)}</span>`:`<span class="designer-badge">✦ Chưa phân công thiết kế</span>`}
-              ${depositInfoFromQuote(x).amount?`<span class="delivery-badge">Cọc: ${money(depositInfoFromQuote(x).amount)}</span>`:""}
-              ${x.paymentMethod?`<span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>`:""}
-            </div>
+    return `<div class="order-card ${x.urgent?"urgent-order":""}" data-order-id="${x.id}">
+      <div class="order-head">
+        <div>
+          <span class="order-code">${esc(x.orderCode||makeOrderCode(x.id))}</span>
+          <strong>${esc(x.customer||"Quý Khách Hàng")}</strong>
+          <span class="muted">${esc(x.createdAt||"")} • ${Number(x.count||x.items?.length||0)} hạng mục</span>
+          <div class="order-head-meta">
+            ${x.urgent?`<span class="urgent-badge">⚡ GẤP</span>`:""}
+            ${x.expectedDelivery?`<span class="delivery-badge ${dClass}">Giao dự kiến: ${esc(formatDelivery(x.expectedDelivery))}</span>`:""}
+            ${x.designerName?`<span class="designer-badge">✦ Thiết kế: ${esc(x.designerName)}</span>`:`<span class="designer-badge">✦ Chưa phân công thiết kế</span>`}
+            ${depositInfoFromQuote(x).amount?`<span class="delivery-badge">Cọc: ${money(depositInfoFromQuote(x).amount)}</span>`:""}
+            ${x.paymentMethod?`<span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>`:""}
           </div>
-          <div class="order-total">${money(x.total||x.totals?.grand||0)}</div>
         </div>
+        <div class="order-total"><small>Tổng đơn: ${money(HTXBusinessV30.balance(x).total)}</small><strong class="order-receivable ${HTXBusinessV30.balance(x).remaining===0?'settled':''}">CÒN PHẢI THU: ${money(HTXBusinessV30.balance(x).remaining)}</strong><small>Đã thu / cọc: ${money(HTXBusinessV30.balance(x).received)}</small></div>
+      </div>
 
-        <div class="progress-steps">${steps}</div>
+      <div class="progress-steps">${steps}</div>
 
-        <div class="designer-assignment">
-          <span class="muted">Thiết kế phụ trách:</span>
-          ${hasPermission("assignDesigner")?`
-            <select class="control" onchange="setOrderDesigner(${x.id},this.value)">
-              <option value=""${!x.designerId?" selected":""}>Chưa phân công</option>
-              ${getActiveDesigners().map(u=>`<option value="${u.id}"${Number(x.designerId)===Number(u.id)?" selected":""}>${esc(u.name||u.username)}</option>`).join("")}
+      <div class="designer-assignment">
+        <span class="muted">Thiết kế phụ trách:</span>
+        ${hasPermission("assignDesigner")?`
+          <select class="control" onchange="setOrderDesigner(${x.id},this.value)">
+            <option value=""${!x.designerId?" selected":""}>Chưa phân công</option>
+            ${getActiveDesigners().map(u=>`<option value="${u.id}"${Number(x.designerId)===Number(u.id)?" selected":""}>${esc(u.name||u.username)}</option>`).join("")}
+          </select>
+        `:`<span class="designer-badge">${esc(x.designerName||"Chưa phân công")}</span>`}
+      </div>
+
+      <div class="payment-row">
+        <span class="muted">Hiện tại: <b>${esc(currentStatus)}</b></span>
+        <div class="order-payment-controls">
+          ${hasPermission("payment")?`
+            <select class="control order-payment-select" onchange="setOrderPaymentMethod(${x.id},this.value)">
+              <option value=""${!x.paymentMethod?" selected":""}>Chọn cách thu tiền</option>
+              <option value="cash"${x.paymentMethod==="cash"?" selected":""}>Thu tiền mặt</option>
+              <option value="personal_transfer"${x.paymentMethod==="personal_transfer"?" selected":""}>Thu chuyển khoản cá nhân</option>
+              <option value="company_transfer"${x.paymentMethod==="company_transfer"?" selected":""}>Thu chuyển khoản công ty</option>
             </select>
-          `:`<span class="designer-badge">${esc(x.designerName||"Chưa phân công")}</span>`}
+            <button class="paid-btn ${x.paid?"paid":""}" onclick="toggleOrderPaid(${x.id})">
+              ${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}
+            </button>
+          `:`
+            <span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>
+            <span class="role-badge ${x.paid?"":"printing"}">${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}</span>
+          `}
         </div>
+      </div>
 
-        <div class="payment-row">
-          <span class="muted">Hiện tại: <b>${esc(currentStatus)}</b></span>
-          <div class="order-payment-controls">
-            ${hasPermission("payment")?`
-              <select class="control order-payment-select" onchange="setOrderPaymentMethod(${x.id},this.value)">
-                <option value=""${!x.paymentMethod?" selected":""}>Chọn cách thu tiền</option>
-                <option value="cash"${x.paymentMethod==="cash"?" selected":""}>Thu tiền mặt</option>
-                <option value="personal_transfer"${x.paymentMethod==="personal_transfer"?" selected":""}>Thu chuyển khoản cá nhân</option>
-                <option value="company_transfer"${x.paymentMethod==="company_transfer"?" selected":""}>Thu chuyển khoản công ty</option>
-              </select>
-              <button class="paid-btn ${x.paid?"paid":""}" onclick="toggleOrderPaid(${x.id})">
-                ${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}
-              </button>
-            `:`
-              <span class="payment-method-badge ${paymentMethodClass(x.paymentMethod)}">${esc(paymentMethodLabel(x.paymentMethod))}</span>
-              <span class="role-badge ${x.paid?"":"printing"}">${x.paid?"✓ ĐÃ THU TIỀN":"CHƯA THU TIỀN"}</span>
-            `}
-          </div>
-        </div>
-
-        <div class="order-card-actions">
-          <button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem chi tiết</button>
-          ${hasPermission("quote") && x.items?.length?`<button class="ghost-btn" onclick="editOrder(${x.id})">Điều chỉnh đơn</button>`:""}
-          ${x.items?.length?`<button class="ghost-btn" onclick="printSavedOrder(${x.id})">In báo giá</button>`:""}
-          ${x.items?.length?`<button class="ghost-btn" onclick="exportSavedOrder(${x.id})">Xuất Excel</button>`:""}
-          ${hasPermission("deleteOrder")?`<button class="ghost-btn btn-delete-order" onclick="deleteOrder(${x.id})">Xóa đơn</button>`:""}
-        </div>
+      <div class="order-card-actions">
+        <button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem chi tiết</button>
+        ${hasPermission("quote") && x.items?.length?`<button class="ghost-btn" onclick="editOrder(${x.id})">Điều chỉnh đơn</button>`:""}
+        ${x.items?.length?`<button class="ghost-btn" onclick="printSavedOrder(${x.id})">In báo giá</button>`:""}
+        ${x.items?.length?`<button class="ghost-btn" onclick="exportSavedOrder(${x.id})">Xuất Excel</button>`:""}
+        ${hasPermission("deleteOrder")?`<button class="ghost-btn btn-delete-order" onclick="deleteOrder(${x.id})">Xóa đơn</button>`:""}
       </div>
     </div>`;
   }).join("");
@@ -7489,11 +7359,14 @@ function copyCustomerFollowup(id){
 
 function renderDashboard(){
   const list=getHistory();
+  const revenue=list.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
+  const received=list.filter(x=>x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
+  const unpaid=list.filter(x=>!x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
+  const production=list.filter(x=>(x.status||PRODUCTION_STATUSES[0])!=="Đã giao").length;
+  const delivered=list.filter(x=>(x.status||PRODUCTION_STATUSES[0])==="Đã giao").length;
+
   const selectedMonth=getWorkMonth();
   const monthOrders=list.filter(x=>monthKeyFromOrder(x)===selectedMonth);
-  const revenue=list.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
-  const unpaid=list.filter(x=>!x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
-
   const monthRevenue=monthOrders.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
   const monthCollected=monthOrders.filter(x=>x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
   const monthDebt=monthOrders.filter(x=>!x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
@@ -7527,7 +7400,6 @@ function renderDashboard(){
   $("finAllRevenue").textContent=money(revenue);
   $("finAllDebt").textContent=money(unpaid);
   $("finAllDebtMeta").textContent=`${debtCustomers} khách còn nợ`;
-
   $("finDelivered").textContent=fmt(monthDelivered);
   $("finProduction").textContent=fmt(monthProduction);
   $("finUrgent").textContent=fmt(monthUrgent);
@@ -7545,70 +7417,90 @@ function renderDashboard(){
   $("dashUnpaidOrders").textContent=fmt(unpaidOrders.length);
   $("dashUnpaidAmount").textContent=`${money(unpaidAmount)} công nợ`;
 
-  $("cashflowMonthCaption").textContent=`Tháng ${monthLabel(selectedMonth)}`;
-  $("cashflowCollectedValue").textContent=money(monthCollected);
-  $("cashflowDebtValue").textContent=money(monthDebt);
-  $("cashflowCashValue").textContent=money(cashCollected);
-  $("cashflowPersonalValue").textContent=money(personalCollected);
-  $("cashflowCompanyValue").textContent=money(companyCollected);
-
-  const monthBase=Math.max(1,monthRevenue);
-  $("cashflowCollectedBar").style.width=`${Math.min(100,monthCollected/monthBase*100)}%`;
-  $("cashflowDebtBar").style.width=`${Math.min(100,monthDebt/monthBase*100)}%`;
-  const collectedBase=Math.max(1,monthCollected);
-  $("cashflowCashBar").style.width=`${Math.min(100,cashCollected/collectedBase*100)}%`;
-  $("cashflowPersonalBar").style.width=`${Math.min(100,personalCollected/collectedBase*100)}%`;
-  $("cashflowCompanyBar").style.width=`${Math.min(100,companyCollected/collectedBase*100)}%`;
-
   const actionRows=list
     .filter(x=>(x.status||PRODUCTION_STATUSES[0])!=="Đã giao" || !x.paid)
     .sort((a,b)=>{
       if(!!a.urgent!==!!b.urgent)return a.urgent?-1:1;
       const af=deliveryFollowupInfo(a),bf=deliveryFollowupInfo(b);
       if(af.rank!==bf.rank)return af.rank-bf.rank;
+      if(!!a.paid!==!!b.paid)return a.paid?1:-1;
+      const at=a.expectedDelivery?new Date(a.expectedDelivery).getTime():Infinity;
+      const bt=b.expectedDelivery?new Date(b.expectedDelivery).getTime():Infinity;
+      if(at!==bt)return at-bt;
       return Number(b.id||0)-Number(a.id||0);
-    })
-    .slice(0,40);
+    });
 
   $("dashboardActionOrders").innerHTML=actionRows.length?actionRows.map(x=>{
     const f=orderFinancials(x);
     const d=deliveryFollowupInfo(x);
+    const ci=x.customerInfo||{};
     const status=x.status||PRODUCTION_STATUSES[0];
-    const priority=x.urgent?'<span class="urgent-badge">⚡ GẤP</span>':
-      (d.rank===1?'<span class="overview-status danger">QUÁ HẠN</span>':
-      d.rank===2?'<span class="overview-status warn">SẮP GIAO</span>':
-      !x.paid?'<span class="overview-status warn">CHƯA THU</span>':'<span class="overview-status">THEO DÕI</span>');
-    return `<tr class="${x.urgent?"order-urgent ":""}${d.rowCls}">
+    const priority=x.urgent?`<span class="urgent-badge">⚡ GẤP</span>`:
+      (d.rank===1?`<span class="overview-status danger">QUÁ HẠN</span>`:
+      d.rank===2?`<span class="overview-status warn">SẮP GIAO</span>`:
+      !x.paid?`<span class="overview-status warn">CHƯA THU</span>`:`<span class="overview-status">THEO DÕI</span>`);
+    const rowCls=`${x.urgent?"order-urgent ":""}${d.rowCls}`;
+    return `<tr class="${rowCls}">
       <td>${priority}</td>
       <td><span class="action-order-code">${esc(x.orderCode||makeOrderCode(x.id))}</span></td>
-      <td><strong>${esc(x.customer||"Quý Khách Hàng")}</strong></td>
-      <td><span class="status-pill ${status==="Đã giao"?"delivered":""}">${esc(status)}</span></td>
-      <td><div class="delivery-text ${d.cls}">${esc(d.label)}</div>${x.expectedDelivery?`<div class="overview-note">${esc(formatDelivery(x.expectedDelivery))}</div>`:""}</td>
-      <td class="money">${money(f.grand)}</td>
-      <td class="money">${money(f.remaining)}</td>
-      <td>${x.paid?'<span class="overview-status good">ĐÃ THU</span>':'<span class="overview-status warn">CHƯA THU</span>'}</td>
-      <td><button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem</button></td>
+      <td class="customer-mini">
+        <strong>${esc(x.customer||"Quý Khách Hàng")}</strong>
+        ${ci.company?`<span>${esc(ci.company)}</span>`:""}
+        ${ci.phone?`<span>${esc(ci.phone)}</span>`:""}
+        ${x.designerName?`<span>Thiết kế: ${esc(x.designerName)}</span>`:""}
+      </td>
+      <td>
+        <span class="status-pill ${status==="Đã giao"?"delivered":""}">${esc(status)}</span>
+      </td>
+      <td>
+        <div class="delivery-text ${d.cls}">${esc(d.label)}</div>
+        ${x.expectedDelivery?`<div class="overview-note">${esc(formatDelivery(x.expectedDelivery))}</div>`:""}
+      </td>
+      <td class="money-cell">${money(f.subtotal)}</td>
+      <td class="money-cell">${money(f.designFee)}</td>
+      <td class="money-cell">${money(f.shipFee)}</td>
+      <td class="money-cell">${money(f.vat)}</td>
+      <td class="money-cell em">${money(f.grand)}</td>
+      <td class="money-cell">${money(f.deposit)}</td>
+      <td class="balance-cell">${money(f.remaining)}</td>
+      <td>
+        <div>${x.paid?`<span class="overview-status">Đã thu</span>`:`<span class="overview-status warn">Chưa thu</span>`}</div>
+        <div class="overview-note" style="margin-top:4px">${esc(paymentMethodLabel(x.paymentMethod))}</div>
+      </td>
+      <td>
+        <div class="action-buttons">
+          <button class="primary" onclick="showOrderDetail(${x.id})">Chi tiết</button>
+          ${hasPermission("quote")&&x.items?.length?`<button onclick="editOrder(${x.id})">Điều chỉnh</button>`:""}
+          <button onclick="copyCustomerFollowup(${x.id})">Sao chép nhắc khách</button>
+          ${x.items?.length?`<button onclick="printSavedOrder(${x.id})">In báo giá</button>`:""}
+          ${hasPermission("deleteOrder")?`<button class="btn-delete-order" onclick="deleteOrder(${x.id})">Xóa đơn</button>`:""}
+        </div>
+      </td>
     </tr>`;
-  }).join(""):`<tr><td colspan="9"><div class="empty-state"><strong>Không có đơn cần theo dõi</strong>Các đơn cần xử lý sẽ xuất hiện tại đây.</div></td></tr>`;
+  }).join(""):`<tr><td colspan="14"><div class="dashboard-empty"><strong>Không có đơn cần theo dõi</strong>Tất cả đơn đã hoàn thành và thanh toán.</div></td></tr>`;
 
   const months=getFinanceMonths(6);
-  let previousRevenue=null;
-  $("financeMonthBody").innerHTML=months.map(mk=>{
+  const monthStats=months.map(mk=>{
     const rows=list.filter(x=>monthKeyFromOrder(x)===mk);
-    const rev=rows.reduce((s,x)=>s+orderFinancials(x).grand,0);
-    const col=rows.filter(x=>x.paid).reduce((s,x)=>s+orderFinancials(x).grand,0);
-    const debt=Math.max(0,rev-col);
-    const rate=rev?col/rev*100:0;
-    let trend="—";
-    if(previousRevenue!==null){
-      const diff=rev-previousRevenue;
-      trend=diff===0?"0%":(previousRevenue?((diff/previousRevenue*100).toFixed(1)+"%"):(rev>0?"+100%":"0%"));
-    }
-    previousRevenue=rev;
-    return `<tr class="${mk===selectedMonth?"month-current":""}">
-      <td>${monthLabel(mk)}</td><td>${fmt(rows.length)}</td><td class="money">${money(rev)}</td>
-      <td class="money">${money(col)}</td><td class="money">${money(debt)}</td>
-      <td>${rate.toFixed(1)}%</td><td>${trend}</td>
+    const rev=rows.reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
+    const col=rows.filter(x=>x.paid).reduce((s,x)=>s+Number(x.total||x.totals?.grand||0),0);
+    return {mk,rows,rev,col,debt:rev-col,rate:rev?col/rev*100:0};
+  });
+  const maxRevenue=Math.max(1,...monthStats.map(x=>x.rev));
+  $("financeMonthBody").innerHTML=monthStats.map((x,i)=>{
+    const prev=i?monthStats[i-1].rev:0;
+    const growth=prev?((x.rev-prev)/prev*100):null;
+    return `<tr class="${x.mk===selectedMonth?"month-current":""}">
+      <td><b>${monthLabel(x.mk)}</b></td>
+      <td>${fmt(x.rows.length)}</td>
+      <td class="money"><b>${money(x.rev)}</b></td>
+      <td class="money">${money(x.col)}</td>
+      <td class="money">${money(x.debt)}</td>
+      <td>${x.rate.toFixed(1)}%</td>
+      <td>
+        <div class="revenue-bar-wrap"><div class="revenue-bar" style="width:${Math.round(x.rev/maxRevenue*100)}%"></div></div>
+        <div class="overview-note">${growth===null?"—":`${growth>=0?"+":""}${growth.toFixed(1)}% so tháng trước`}</div>
+      </td>
     </tr>`;
   }).join("");
 
@@ -7629,7 +7521,7 @@ function renderCustomers(){
   const rows=profiles.map(p=>{
     const related=orders.filter(o=>orderBelongsToCustomerProfile(o,p));
     const total=related.reduce((sum,o)=>sum+Number(o.total||o.totals?.grand||0),0);
-    const debt=related.filter(o=>!o.paid).reduce((sum,o)=>sum+Number(o.total||o.totals?.grand||0),0);
+    const debt=related.reduce((sum,o)=>sum+HTXBusinessV30.balance(o).remaining,0);
     const latest=related.sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];
     const first=related.sort((a,b)=>Number(a.id||0)-Number(b.id||0))[0];
 
@@ -7847,11 +7739,10 @@ function renderWorkMonth(){
   if($("globalWorkMonth"))$("globalWorkMonth").value=mk;
   if($("workMonthPicker"))$("workMonthPicker").value=mk;
   const [yy,mm]=mk.split("-");
-  $("workMonthLabel").textContent=`Tháng ${mm}/${yy}`;
+  if($("workMonthLabel"))$("workMonthLabel").textContent=`Tháng ${mm}/${yy}`;
+  if($("monthStageCaption"))$("monthStageCaption").textContent=`${mm}/${yy}`;
 
-  const list=getHistory()
-    .filter(x=>monthKeyFromOrder(x)===mk)
-    .sort((a,b)=>Number(b.id||0)-Number(a.id||0));
+  const list=getHistory().filter(x=>monthKeyFromOrder(x)===mk);
   const revenue=list.reduce((sum,x)=>sum+Number(x.total||x.totals?.grand||0),0);
   const delivered=list.filter(x=>x.status==="Đã giao").length;
   const unpaid=list.filter(x=>!x.paid).reduce((sum,x)=>sum+Number(x.total||x.totals?.grand||0),0);
@@ -7861,14 +7752,36 @@ function renderWorkMonth(){
   $("monthDelivered").textContent=fmt(delivered);
   $("monthUnpaid").textContent=money(unpaid);
 
-  const show=list.slice(0,20);
-  $("monthOrderList").innerHTML=show.length?show.map(x=>`<div class="month-order-row">
-    <b>${esc(x.orderCode||makeOrderCode(x.id))}</b>
-    <span>${esc(x.customer||"")}${x.urgent?' <span class="urgent-badge">GẤP</span>':""}</span>
-    <span class="status-pill ${x.status==="Đã giao"?"delivered":""}">${esc(x.status||PRODUCTION_STATUSES[0])}</span>
-    <span>${money(x.total||x.totals?.grand||0)}</span>
-    <button class="ghost-btn" onclick="showOrderDetail(${x.id})">Xem</button>
-  </div>`).join(""):`<div class="empty-state"><strong>Chưa có đơn trong tháng ${mm}/${yy}</strong>Đơn lưu trong tháng sẽ xuất hiện tại đây.</div>`;
+  if($("monthStages")){
+    const max=Math.max(1,...PRODUCTION_STATUSES.map(st=>list.filter(x=>(x.status||PRODUCTION_STATUSES[0])===st).length));
+    $("monthStages").innerHTML=PRODUCTION_STATUSES.map(st=>{
+      const count=list.filter(x=>(x.status||PRODUCTION_STATUSES[0])===st).length;
+      return `<div class="stage-row"><span>${esc(st)}</span><div class="stage-track"><div class="stage-fill" style="width:${Math.round(count/max*100)}%"></div></div><div class="stage-count">${count}</div></div>`;
+    }).join("");
+  }
+
+  const show=list.slice(0,50);
+  if($("monthOrderList")){
+    $("monthOrderList").innerHTML=show.length?show.map(x=>{
+      const code=esc(x.orderCode||makeOrderCode(x.id));
+      const cust=esc(x.customer||"Khách vãng lai");
+      const st=esc(x.status||PRODUCTION_STATUSES[0]);
+      const isDelivered=x.status==="Đã giao";
+      const isPaid=!!x.paid;
+      const totalVal=money(x.total||x.totals?.grand||0);
+      return `<div class="month-order-row">
+        <b>${code}</b>
+        <div>
+          <span style="font-weight:600;color:#1d2923">${cust}</span>
+          ${x.urgent?` <span class="urgent-badge" style="margin-left:4px">GẤP</span>`:""}
+        </div>
+        <div><span class="status-pill ${isDelivered?"delivered":""}">${st}</span></div>
+        <div style="font-weight:700;color:#155235">${totalVal}</div>
+        <div><span class="overview-status ${isPaid?"":"warn"}">${isPaid?"Đã thu":"Chưa thu"}</span></div>
+        <div><button class="ghost-btn" style="padding:4px 9px;font-size:11px" onclick="showOrderDetail(${x.id})">Chi tiết</button></div>
+      </div>`;
+    }).join(""):`<div class="empty-state" style="padding:24px 16px;text-align:center"><strong>Chưa có đơn trong tháng ${mm}/${yy}</strong>Đơn lưu trong tháng sẽ xuất hiện tại đây.</div>`;
+  }
 }
 
 function openCatalogDetail(productKey){
@@ -8258,7 +8171,7 @@ function renderPayroll(){
       <td>${fmt(r.workedDays||0)} / ${fmt(r.standardDays||26)}</td>
       <td class="num">${fmt(r.overtimeHours||0)} giờ<br><b>${money(c.overtime)}</b></td>
       <td class="num">${money(fixed+custom)}</td>
-      <td><span class="kpi-chip">${Number(r.kpiPercent||0)}%</span><br>${money(r.kpiBonus||0)}</td>
+      <td><span class="kpi-chip">${esc(kpiLabelV30(r))}</span><br>${money(r.kpiBonus||0)}</td>
       <td class="num">${money(c.employeeInsurance)}</td>
       <td class="num payroll-net">${money(c.net)}${c.directDeductions?`<div class="muted">Khấu trừ khác: ${money(c.directDeductions)}</div>`:""}</td>
       <td class="num">${money(c.employerInsurance)}</td>
@@ -8489,7 +8402,7 @@ function printPayslip(id){
     ["Phụ cấp vệ sinh",Number(r.cleaningAllowance||0)],
     ["Phụ cấp in ấn",Number(r.printingAllowance||0)],
     ["Phụ cấp thi công",Number(r.constructionAllowance||0)],
-    ["Thưởng KPI",Number(r.kpiBonus||0)],
+    [r.designKpi ? `Thiết kế: ${r.designKpi.count} sản phẩm — ${r.designKpi.status}` : "Thưởng KPI",Number(r.kpiBonus||0)],
     ["Thưởng khác",Number(r.otherBonus||0)],
     ...(r.customAllowances||[]).map(x=>[x.name||"Phụ cấp khác",Number(x.amount||0)]),
     ...(r.salaryAdjustments||[]).filter(x=>x.type!=="minus").map(x=>[x.name||"Điều chỉnh tăng",Number(x.amount||0)])
@@ -8556,7 +8469,7 @@ function printPayslip(id){
       <div><b>Lương cơ bản:</b> ${money(r.baseSalary||0)}</div>
       <div><b>Lương sau điều chỉnh:</b> ${money(c.adjustedBase)}</div>
       <div><b>Ngày công:</b> ${fmt(r.workedDays||0)} / ${fmt(r.standardDays||26)}</div>
-      <div><b>KPI:</b> ${Number(r.kpiPercent||0)}%</div>
+      <div><b>KPI:</b> ${esc(kpiLabelV30(r))}</div>
       <div><b>Điều chỉnh cơ bản:</b> ${esc(modeLabel)} ${r.baseAdjustMode&&r.baseAdjustMode!=="none"?`(${fmt(r.baseAdjustValue||0)}${String(r.baseAdjustMode).includes("percent")?"%":" đ"})`:""}</div>
       <div><b>Đóng BHXH:</b> ${r.insuranceEnabled!==false?"Có":"Không"}</div>
     </div>
@@ -8638,75 +8551,7 @@ function deletePayrollRecord(id){
 }
 
 
-async function loadGoogleSheetsConfigUI(){
-  if(currentUser?.role!=="director")return;
-  try{
-    const res=await fetch("/api/admin/sheets/config",{credentials:"same-origin"});
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.error||"Không tải được cấu hình.");
-    if($("sheetsWebAppUrl"))$("sheetsWebAppUrl").value=data.url||"";
-    if($("sheetsSyncSecret"))$("sheetsSyncSecret").value="";
-    if($("sheetsAutoSyncCheck"))$("sheetsAutoSyncCheck").checked=data.autoSync!==false;
-    if($("googleSheetsAutoBadge")){
-      $("googleSheetsAutoBadge").textContent=`Tự động đẩy khi thao tác: ${data.autoSync!==false?"BẬT":"TẮT"}`;
-    }
-  }catch(err){
-    console.warn("Không tải được cấu hình Google Sheet:",err);
-  }
-}
-
-async function saveGoogleSheetsConfigUI(){
-  if(currentUser?.role!=="director"){showToast("Chỉ Giám đốc được cấu hình Google Sheet.");return}
-  const url=$("sheetsWebAppUrl")?.value.trim()||"";
-  const secret=$("sheetsSyncSecret")?.value||"";
-  const autoSync=!!$("sheetsAutoSyncCheck")?.checked;
-  const box=$("googleSheetsSyncStatus");
-  if(box){box.className="sheets-sync-status";box.textContent="Đang lưu cấu hình..."}
-  try{
-    const res=await fetch("/api/admin/sheets/config",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      credentials:"same-origin",
-      body:JSON.stringify({url,secret,autoSync})
-    });
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.error||"Không lưu được cấu hình.");
-    if($("sheetsSyncSecret"))$("sheetsSyncSecret").value="";
-    if($("googleSheetsAutoBadge")){
-      $("googleSheetsAutoBadge").textContent=`Tự động đẩy khi thao tác: ${data.autoSync!==false?"BẬT":"TẮT"}`;
-    }
-    showToast("Đã lưu cấu hình Google Sheet.");
-    await refreshGoogleSheetsStatus();
-  }catch(err){
-    if(box){box.className="sheets-sync-status error";box.textContent=`Lỗi: ${err.message}`}
-    else alert(`Không lưu được cấu hình Google Sheet: ${err.message}`);
-  }
-}
-
-async function syncTwoWayWithGoogleSheets(){
-  if(currentUser?.role!=="director"){showToast("Chỉ Giám đốc được đồng bộ Google Sheet.");return}
-  if(!confirm("ĐỒNG BỘ 2 CHIỀU VỚI GOOGLE SHEET?\n\nDữ liệu Sheet sẽ được nhập vào Firestore, sau đó dữ liệu đã chuẩn hóa sẽ được đẩy lại lên Sheet."))return;
-  showToast("Đang đồng bộ hai chiều với Google Sheet...");
-  try{
-    const res=await fetch("/api/admin/sheets/sync-two-way",{method:"POST",credentials:"same-origin"});
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.error||"Đồng bộ hai chiều thất bại.");
-    await hydrateFromBackend();
-    renderDashboard();
-    renderHistory();
-    renderCustomers();
-    renderInventory();
-    renderPayroll();
-    renderPricebook();
-    showToast("Đã hoàn tất đồng bộ hai chiều với Google Sheet.");
-    refreshGoogleSheetsStatus();
-  }catch(err){
-    alert(`Không đồng bộ được Google Sheet: ${err.message}`);
-  }
-}
-
 async function refreshGoogleSheetsStatus(){
-  await loadGoogleSheetsConfigUI();
   const box=$("googleSheetsSyncStatus");
   if(!box)return;
   box.className="sheets-sync-status";
@@ -8764,12 +8609,12 @@ function navigate(page,pushHash=true){
   if(!currentUser)return;
   if(page==="workmonth")page="dashboard";
   if(!hasPagePermission(page)){
-    const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","workmonth","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
-    page=allowed[0]||"orders";
+    const allowed=(ROLE_PERMISSIONS[currentUser.role]||[]).filter(x=>["dashboard","quote","orders","customers","pricebook","inventory","payroll","accounts"].includes(x));
+    page=allowed[0]||"dashboard";
   }
 
   const meta={
-    dashboard:["Tổng quan","Doanh thu, công nợ và tháng làm việc trên một màn hình"],
+    dashboard:["Tổng quan & Tháng làm việc","Theo dõi doanh thu, tiến độ, dòng tiền và công nợ tập trung"],
     quote:["Tạo báo giá","Tính giá tự động theo 17 bảng giá Hành Tinh Xanh"],
     orders:["Đơn sản xuất","Theo dõi tiến độ từ tiếp nhận file đến khi giao hàng"],
     customers:["Khách hàng","Tổng hợp lịch sử đơn hàng và công nợ theo khách hàng"],
@@ -8789,7 +8634,10 @@ function navigate(page,pushHash=true){
   syncMobileNav(page);
   if(pushHash)history.replaceState(null,"",`#${page}`);
 
-  if(page==="dashboard")renderDashboard();
+  if(page==="dashboard"){
+    renderDashboard();
+    renderWorkMonth();
+  }
   if(page==="orders")renderHistory();
   if(page==="customers")renderCustomers();
   if(page==="pricebook")renderPricebook();
@@ -8797,7 +8645,7 @@ function navigate(page,pushHash=true){
   if(page==="payroll")renderPayroll();
   if(page==="accounts"){
     renderAccounts();
-    if(currentUser?.role==="director")refreshGoogleSheetsStatus();
+
   }
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -9026,7 +8874,7 @@ function showOrderDetail(id){
       <div class="total-row"><span>VAT</span><strong>${money(totals.vat||0)}</strong></div>
       <div class="total-row final"><span>THÀNH TIỀN</span><strong>${money(x.total||totals.grand||0)}</strong></div>
       <div class="total-row"><span>Đặt cọc</span><strong class="deposit-highlight">${money(depositInfoFromQuote(x).amount)}</strong></div>
-      <div class="total-row"><span>Còn lại sau cọc</span><strong>${money(depositInfoFromQuote(x).remaining)}</strong></div>
+      <div class="total-row"><span>Còn lại sau cọc</span><strong>${money(HTXBusinessV30.balance(x).remaining)}</strong></div>
     </div>
 
     ${Array.isArray(x.revisions)&&x.revisions.length?`
@@ -9094,7 +8942,7 @@ function row(r,cells,height){return `<row r="${r}"${height?` ht="${height}" cust
 
 const STYLES_XML=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0"/></numFmts>
+<numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0"/><numFmt numFmtId="165" formatCode="#,##0.######"/></numFmts>
 <fonts count="5">
 <font><sz val="12"/><name val="Times New Roman"/></font>
 <font><sz val="14"/><name val="Times New Roman"/></font>
@@ -9105,7 +8953,7 @@ const STYLES_XML=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="15">
+<cellXfs count="16">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
@@ -9121,6 +8969,7 @@ const STYLES_XML=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyAlignment="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
 <xf numFmtId="164" fontId="4" fillId="0" borderId="1" xfId="0" applyAlignment="1" applyBorder="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
@@ -9142,6 +8991,7 @@ function currentQuoteObject(){
     createdAt:new Date().toLocaleString("vi-VN"),
     vatEnabled:$("vatEnabled").checked,
     designFee:t.designFee,
+    designProductCount:designCountForSaveV30(),
     shipFee:t.shipFee,
     deposit:t.deposit,
     paymentMethod:$("paymentMethod")?.value||"",
@@ -9211,8 +9061,8 @@ function printQuoteObject(q){
       <td class="c">${i+1}</td>
       <td><b>${esc(item.name)}</b>${details?`<div class="spec">${details}</div>`:""}${item.note?`<div class="note">Ghi chú: ${esc(item.note)}</div>`:""}</td>
       <td class="c">${esc(item.unit||"")}</td>
-      <td class="r">${fmt(item.qty)}</td>
-      <td class="r">${money(item.unitPrice)}</td>
+      <td class="r">${formatQuantityV29(item.qty)}</td>
+      <td class="r">${formatUnitPriceV29(item.unitPrice)}</td>
       <td class="r"><b>${money(item.total)}</b></td>
     </tr>`;
   }).join("");
@@ -9372,7 +9222,7 @@ SĐT: 0912824106 (Trương Quốc Khánh)`;
     const details=item.details.map(d=>`${d.label}: ${d.value}`).join("\n");
     rows.push(row(r,[
       cell(`B${r}`,i+1,6,"n"),cell(`C${r}`,`${item.name}\n${details}`,7),cell(`D${r}`,item.unit,6),
-      cell(`E${r}`,item.qty,6,"n"),cell(`F${r}`,Math.round(item.unitPrice),10,"n"),cell(`G${r}`,item.total,10,"n"),cell(`H${r}`,item.note||"",7)
+      cell(`E${r}`,item.qty,6,"n"),cell(`F${r}`,item.unitPrice,15,"n"),cell(`G${r}`,item.total,10,"n"),cell(`H${r}`,item.note||"",7)
     ],Math.max(42,32+Math.min(70,item.details.length*10))));
     r++;
   });
@@ -9459,8 +9309,23 @@ async function saveAndExport(){
   showToast(q._updated?`Đã cập nhật & xuất Excel ${q.orderCode}`:`Đã lưu & xuất Excel ${q.orderCode}`);
   navigate("orders");
 }
-init();
 </script>
-<script type="module" src="/realtime.js?v=27.4"></script>
+<!-- HTX QUOTE V29 -->
+<script src="/quote-math.js?v=29.0.0"></script>
+<script src="/quote-v29.js?v=29.0.0"></script>
+<!-- HTX BUSINESS V30 -->
+<script src="/business-v30.js?v=31.0.0"></script>
+<script src="/sync-v30.js?v=31.0.0"></script>
+<script src="/app-v30.js?v=31.0.0"></script>
+<script type="module">
+  import '/firebase-native-v31.js?v=31.0.0';
+  try {
+    await window.HTXFirebaseNativeReady;
+    init();
+  } catch (err) {
+    console.error(err);
+    document.body.innerHTML='<div style="font-family:Arial;padding:40px;max-width:720px;margin:auto"><h2>Không kết nối được Firebase</h2><p>'+String(err.message||err)+'</p><p>Hãy kiểm tra Firebase Integration của ứng dụng trong Google AI Studio.</p></div>';
+  }
+</script>
 </body>
 </html>

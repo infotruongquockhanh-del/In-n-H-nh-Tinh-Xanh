@@ -1,0 +1,35 @@
+name: Import complete HTX V31 source
+on:
+  push:
+    branches: [migration/v31-from-info-account]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Expand preserved V31 package
+        run: |
+          rm -rf /tmp/htx-v31-package /tmp/htx-v31-source
+          mkdir -p /tmp/htx-v31-package /tmp/htx-v31-source
+          unzip -q transfer/HTX-V31-FULL-SOURCE.zip -d /tmp/htx-v31-package
+          unzip -q /tmp/htx-v31-package/Hanh-Tinh-Xanh-V31-FULL.zip -d /tmp/htx-v31-source
+          rm -rf /tmp/htx-v31-source/.github/workflows
+          test "$(node -p "require('/tmp/htx-v31-source/package.json').version")" = "31.0.0"
+          node --check /tmp/htx-v31-source/server.js
+          node --check /tmp/htx-v31-source/public/firebase-native-v31.js
+      - name: Replace migration branch with exact V31 source
+        run: |
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github -exec rm -rf {} +
+          find .github -mindepth 1 -maxdepth 1 ! -name workflows -exec rm -rf {} + 2>/dev/null || true
+          find .github/workflows -mindepth 1 -maxdepth 1 ! -name import-v31.yml -exec rm -rf {} + 2>/dev/null || true
+          cp -a /tmp/htx-v31-source/. .
+          git config user.name "HTX V31 migration"
+          git config user.email "info.truongquockhanh@gmail.com"
+          git add -A
+          git commit -m "release: restore complete V31 source under info account"
+          git push origin HEAD:migration/v31-from-info-account

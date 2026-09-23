@@ -1,17 +1,91 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn(){ return request.auth != null; }
-    function role(){ return signedIn() ? request.auth.token.role : null; }
-    function payrollAllowed(){ return role() == "director" || role() == "accounting"; }
-    match /orders/{id} { allow read: if signedIn(); allow write: if false; }
-    match /customers/{id} { allow read: if signedIn(); allow write: if false; }
-    match /inventory/{id} { allow read: if signedIn(); allow write: if false; }
-    match /customProducts/{id} { allow read: if signedIn(); allow write: if false; }
-    match /settings/{id} { allow read: if signedIn() && (id != "htx_payroll_v17" || payrollAllowed()); allow write: if false; }
-    match /config/{id} { allow read: if signedIn(); allow write: if false; }
-    match /users/{id} { allow read, write: if false; }
-    match /auditLogs/{id} { allow read, write: if false; }
+    function email() { return request.auth != null ? request.auth.token.email : null; }
+    function owner() {
+      return request.auth != null
+        && email() in ['inhanhtinhxanh@gmail.com','info.truongquockhanh@gmail.com'];
+    }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function invitePath() { return /databases/$(database)/documents/accessByEmail/$(email()); }
+    function hasUser() { return request.auth != null && exists(userPath()); }
+    function user() { return get(userPath()).data; }
+    function active() {
+      return hasUser() && user().active == true
+        && user().role in ['director','accounting','sales','designer','printing'];
+    }
+    function director() { return active() && user().role == 'director'; }
+    function office() { return active() && user().role in ['director','accounting','sales']; }
+    function payroll() { return active() && user().role in ['director','accounting']; }
+    function invited() {
+      return request.auth != null && email() != null && exists(invitePath())
+        && get(invitePath()).data.active == true;
+    }
+    match /users/{uid} {
+      allow read: if owner() || (active() && (request.auth.uid == uid || director()));
+      allow create: if request.auth != null && request.auth.uid == uid
+        && (
+          (owner() && request.resource.data.role == 'director' && request.resource.data.active == true)
+          || (invited()
+              && request.resource.data.role == get(invitePath()).data.role
+              && request.resource.data.id == get(invitePath()).data.id
+              && request.resource.data.active == true)
+        );
+      allow update, delete: if director();
+    }
+    match /accessByEmail/{mail} {
+      allow read: if request.auth != null && (director() || email() == mail);
+      allow create, update, delete: if director();
+    }
+    match /orders/{id} {
+      allow read: if active();
+      allow create, delete: if office();
+      allow update: if office()
+        || (active() && user().role in ['designer','printing']
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status','designerId','designerName','designWork','version','updatedAt','updatedBy']));
+    }
+    match /customers/{id} {
+      allow read: if active();
+      allow create, update: if office();
+      allow delete: if director();
+    }
+    match /inventory/{id} {
+      allow read, create, update, delete: if office();
+    }
+    match /customProducts/{id} {
+      allow read, create, update, delete: if office();
+    }
+    match /settings/{id} {
+      allow read: if active() && (id != 'htx_payroll_v17' || payroll());
+      allow write: if (id == 'htx_payroll_v17' && payroll())
+        || (id in ['htx_work_month_v7','htx_price_adjustments_v6','htx_catalog_overrides_v7'] && office());
+    }
+    match /designCompletions/{id} {
+      allow read: if payroll()
+        || (active() && user().role == 'designer' && resource.data.employeeId == user().id);
+      allow create, update: if payroll()
+        || (active() && user().role == 'designer' && request.resource.data.employeeId == user().id);
+      allow delete: if director();
+    }
+    match /config/designKpiPolicy {
+      allow read: if payroll();
+      allow write: if director();
+    }
+    match /config/{id} {
+      allow read: if active();
+      allow write: if director();
+    }
+    match /auditLogs/{id} {
+      allow create: if active();
+      allow read: if director();
+      allow update, delete: if false;
+    }
+    match /dataHistory/{id} {
+      allow create: if active();
+      allow read: if director();
+      allow update, delete: if false;
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }

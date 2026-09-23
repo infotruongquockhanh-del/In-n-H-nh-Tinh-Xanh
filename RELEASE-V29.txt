@@ -1,0 +1,19 @@
+HÀNH TINH XANH — V29.0.0
+Ngày phát hành mã nguồn: 22/09/2026
+
+Nội dung:
+- Bỏ các khối giao diện dư: cấu hình Google Sheet và tóm tắt phân quyền, biểu đồ dòng tiền tháng, ngày và bộ chọn tháng lặp trên thanh đầu trang.
+- Giữ phần quản lý tài khoản, đăng nhập V28, doanh thu/công nợ, cấu hình đồng bộ đã lưu và bộ chọn tháng ở Tổng quan.
+- Giá in 1 mặt/in 2 mặt cho hạng mục tự tạo và bảng giá cố định; không tự nhân đôi hoặc chia đôi giá chưa khai báo.
+- Hạng mục khác nhập quy cách và giá thủ công theo đơn giá hoặc tổng tiền; lưu lại thông số và chiều tính giá khi sửa đơn.
+
+Mã ứng dụng đã kiểm thử: 4ce9ceaa396c1dc84befdcc801633f739c316771
+Workflow xác minh: HTX V29 pricing and UI checks
+Run: 35731393834 — thành công.
+Bao gồm kiểm thử đăng nhập/phân quyền, phép tính, bảng giá cũ, lưu/mở lại đơn, in báo giá, Excel và trình duyệt điện thoại.
+Các ảnh kiểm thử dùng dữ liệu giả trong cơ sở dữ liệu tạm; không thay đổi dữ liệu website đang chạy.
+Bản release này chỉ thêm tệp ghi chú; không thay đổi mã ứng dụng đã được kiểm thử ở commit nêu trên.
+
+Đọc README-PRICING-V29.md để sử dụng và cập nhật.
+Đẩy mã nguồn lên GitHub không đồng nghĩa website Google AI Studio đã được Publish.
+ZIP là mã nguồn, không phải bản sao lưu cơ sở dữ liệu thực tế.

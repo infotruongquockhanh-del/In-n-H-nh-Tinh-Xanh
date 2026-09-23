@@ -1,0 +1,156 @@
+--- a/server.js
++++ b/server.js
+@@ -1,4 +1,6 @@
+-// HTX_SERVER_V30
++// HTX_SERVER_V30_1
++import { randomUUID } from 'node:crypto';
++import { classifyDatabaseError, publicDatabaseFailure, within } from './src/database-errors.js';
+ import routesV30 from './src/routes-v30.js';
+ import { settingDigests } from './src/data-safety.js';
+ // HTX_AUTH_V28
+@@ -71,13 +73,14 @@
+ });
+ app.use(express.json({limit:"8mb"}));
+ app.use(cookieParser());
++app.use((req,res,next)=>{ req.requestId=randomUUID(); res.setHeader('X-Request-ID',req.requestId); next(); });
+ app.use(accessRoutes);
+ app.use(routesV30);
+ 
+ app.get('/api/health', async (req, res) => {
+   const database = await verifyFirebaseConnection();
+   res.setHeader('Cache-Control','no-store');
+-  res.status(database.connected ? 200 : 503).json({ok:database.connected,version:'30.0.0',authentication:'required'});
++  res.status(database.connected ? 200 : 503).json({ok:database.connected,version:'30.1.0',authentication:'required',code:database.code || (database.connected ? 'OK' : 'DB_UNAVAILABLE'),...(database.connected ? {} : {error:database.error}),requestId:req.requestId});
+ });
+ 
+ app.get("/api/firebase-config",(req,res)=>{
+@@ -300,24 +303,28 @@
+ }));
+ 
+ app.use((err,req,res,next)=>{
+-  console.error(err);
+-  const status=Number(err.status||500);
++  const failure=publicDatabaseFailure(err);
++  console.error(JSON.stringify({event:'HTX_REQUEST_FAILED',requestId:req.requestId,code:failure?.code||'SERVER_ERROR',path:req.path}));
++  if(failure)return res.status(503).json({...failure,requestId:req.requestId});
++  const suppliedStatus=Number(err.status||500);
++  const status=Number.isInteger(suppliedStatus)&&suppliedStatus>=400&&suppliedStatus<=599?suppliedStatus:500;
+   res.status(status).json({
+     error:status>=500
+       ?"Lỗi máy chủ. Kiểm tra cấu hình hệ thống và nhật ký máy chủ."
+       :String(err.message||"Yêu cầu không hợp lệ."),
++    requestId:req.requestId,
+     ...(err.currentVersion!==undefined?{currentVersion:err.currentVersion}:{})
+   });
+ });
+ 
+ async function bootstrap(){
+   try{
+-    const bootstrap=await ensureBootstrap();
++    const bootstrap=await within(ensureBootstrap(),8000);
+     if(bootstrap.created){
+       console.log("Đã khởi tạo dữ liệu mặc định và tài khoản giamdoc.");
+     }
+   }catch(err){
+-    console.error("Không khởi tạo được bootstrap:",err);
++    console.error(JSON.stringify({event:'HTX_BOOTSTRAP_FAILED',code:classifyDatabaseError(err)||'BOOTSTRAP_CHECK_REQUIRED'}));
+   }
+ }
+ 
+@@ -325,7 +332,7 @@
+ 
+ if(!process.env.VERCEL){
+   app.listen(port,"0.0.0.0",()=>{
+-    console.log(`Hành Tinh Xanh V27 Online: http://0.0.0.0:${port}`);
++    console.log(`Hành Tinh Xanh V30.1 Online: http://0.0.0.0:${port}`);
+   });
+ }
+ 
+--- a/src/auth.js
++++ b/src/auth.js
+@@ -1,3 +1,4 @@
++import { within } from './database-errors.js';
+ import { randomBytes } from 'node:crypto';
+ import { SignJWT, jwtVerify } from 'jose';
+ import { db, adminAuth } from './firebase-admin.js';
+@@ -105,10 +106,10 @@
+ export async function createRealtimeToken(user) {
+   if (!approved(user) || user.mustChangePassword) return null;
+   try {
+-    return await adminAuth.createCustomToken(String(user.id), {
++    return await within(adminAuth.createCustomToken(String(user.id), {
+       username: String(user.username || ''), role: user.role,
+       policy: ACCESS_POLICY_VERSION, sv: Number(user.authVersion || 0)
+-    });
++    }),4000);
+   } catch (err) { console.warn('[Auth] Realtime token:', err.code || 'unavailable'); return null; }
+ }
+ // Old Firebase sessions must never bypass an explicit password login.
+--- a/src/access-routes.js
++++ b/src/access-routes.js
+@@ -1,3 +1,4 @@
++import { verifyFirebaseConnection } from './firebase-admin.js';
+ import express from 'express';
+ import path from 'node:path';
+ import { fileURLToPath } from 'node:url';
+@@ -46,7 +47,16 @@
+ router.post(['/api/auth/temporary', '/api/auth/restore'], (req, res) => {
+   res.status(410).json({ error: 'Đăng nhập tạm và khôi phục không cần mật khẩu đã bị tắt. Vui lòng đăng nhập.', code: 'LOGIN_REQUIRED' });
+ });
+-router.post('/api/auth/login', takeAttempt, async (req, res, next) => {
++// Do not consume password-attempt quota when the database itself is unavailable.
++router.post('/api/auth/login', async (req,res,next)=>{
++  if(typeof req.body?.username!=='string'||typeof req.body?.password!=='string'||!req.body.username.trim()||!req.body.password)
++    return res.status(400).json({error:'Vui lòng nhập tài khoản và mật khẩu.'});
++  try {
++    const health=await verifyFirebaseConnection();
++    if(!health.connected)return res.status(503).json({error:health.error,code:health.code,requestId:req.requestId});
++    next();
++  } catch(err){next(err);}
++}, takeAttempt, async (req, res, next) => {
+   try {
+     const { username, password } = req.body || {};
+     if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password)
+--- a/public/login.js
++++ b/public/login.js
+@@ -1,15 +1,15 @@
+ 'use strict';
+ const $ = id => document.getElementById(id);
+ // Old browser cache is never an authentication source. Server data is not deleted.
+-for (const store of [localStorage, sessionStorage]) {
+-  for (const key of Object.keys(store)) if (key.startsWith('htx_') && !key.startsWith('htx_pending_v30_')) store.removeItem(key);
+-}
++try { for (const store of [localStorage, sessionStorage]) {
++  for (const key of ['htx_cached_user','htx_session_token','htx_session_v6']) store.removeItem(key);
++} } catch { /* Storage can be blocked; server-side login must still work. */ }
+ if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(reg => reg.unregister()))).catch(() => {});
+ if (window.caches) caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))).catch(() => {});
+ async function request(url, body) {
+-  const res = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
++  const res = await fetch(url, { signal:AbortSignal.timeout(25000), method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+   const data = await res.json().catch(() => ({}));
+-  if (!res.ok) throw new Error(data.error || 'Không thể xử lý yêu cầu. Vui lòng thử lại.');
++  if (!res.ok) throw new Error((data.error || 'Không thể xử lý yêu cầu. Vui lòng thử lại.') + (data.code ? ' ['+data.code+']' : '') + (data.requestId ? ' Mã hỗ trợ: '+data.requestId : ''));
+   return data;
+ }
+ function showChangePassword() {
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "hanh-tinh-xanh-fullstack",
+-  "version": "30.0.0",
++  "version": "30.1.0",
+   "private": true,
+   "type": "module",
+   "engines": {
+@@ -14,7 +14,8 @@
+     "check": "node --check server.js && node --check src/firebase-admin.js && node --check src/auth.js && node --check src/state-store.js && node --check public/realtime.js && node --check public/service-worker.js",
+     "test": "node --test tests/auth.test.mjs",
+     "test:pricing": "node --test tests/pricing.test.mjs",
+-    "test:business": "node --test tests/business-v30.test.mjs tests/data-v30.test.mjs"
++    "test:business": "node --test tests/business-v30.test.mjs tests/data-v30.test.mjs",
++    "test:recovery": "node --test tests/database-recovery.test.mjs"
+   },
+   "dependencies": {
+     "cookie-parser": "^1.4.7",

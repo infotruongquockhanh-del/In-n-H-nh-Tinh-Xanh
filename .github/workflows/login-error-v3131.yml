@@ -1,0 +1,21 @@
+name: V31.3.1 login error checks
+on:
+  push:
+    branches: [fix/login-error-v3131]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node --check server.js
+      - run: node --check public/login.js
+      - run: |
+          test "$(node -p "require('./package.json').version")" = "31.3.1"
+          grep -q "Firestore Security Rules chưa được Publish" public/login.js
+          grep -q '"version":"31.3.1"' <(node server.js >/tmp/htx.log 2>&1 & PID=$!; sleep 1; curl -sS http://127.0.0.1:3000/api/health; kill $PID)
